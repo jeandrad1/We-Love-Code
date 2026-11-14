@@ -1,5 +1,5 @@
 data/raw/
 data/clean/
-data/harmonized/
+data/agg/
 __pycache__/
 .env

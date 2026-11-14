@@ -60,33 +60,46 @@ function initZone() {
   $("applyCircle").addEventListener("click", () => { S.zone = "circle"; S.circle = { lat: +$("lat").value, lon: +$("lon").value, km: +$("rad").value }; syncZone(); update(true); });
 }
 function initYears() {
-  const y0 = yOf(0);
-  for (let y = y0; y <= CY; y++) { $("yFrom").add(new Option(y, y)); $("yTo").add(new Option(y, y)); }
-  $("yFrom").value = S.yA; $("yTo").value = S.yB;
-  const apply = (which) => {
-    let a = +$("yFrom").value, b = +$("yTo").value;
-    if (a > b) { if (which === "from") b = a; else a = b; $("yFrom").value = a; $("yTo").value = b; }
-    S.yA = a; S.yB = b; S.mapMonth = null;
+  const y0 = yOf(0), A = $("yFrom"), B = $("yTo");
+  [A, B].forEach((r) => { r.min = y0; r.max = CY; });
+  A.value = S.yA; B.value = S.yB;
+  // Marcas cada 5 años bajo el deslizador
+  const pos = (y) => (100 * (y - y0)) / Math.max(1, CY - y0);
+  const ticks = [y0]; for (let y = Math.ceil((y0 + 1) / 5) * 5; y < CY - 1; y += 5) ticks.push(y); ticks.push(CY);
+  $("tsTicks").innerHTML = ticks.map((y) => `<span style="left:${pos(y)}%">${y}</span>`).join("");
+  const paint = () => {
+    const a = +A.value, b = +B.value;
+    $("dualFill").style.left = pos(a) + "%"; $("dualFill").style.right = (100 - pos(b)) + "%";
+    $("tsRange").textContent = a === b ? `${a}` : `${a} – ${b}`;
+    A.setAttribute("aria-valuetext", `desde ${a}`); B.setAttribute("aria-valuetext", `hasta ${b}`);
+    // El tirador de la izquierda queda encima si están juntos al final
+    A.style.zIndex = a >= CY - 1 ? 3 : 2; B.style.zIndex = 2;
+    document.querySelectorAll(".quick button").forEach((q) => {
+      const r = q.dataset.range, on = b === CY && (r === "all" ? a === y0 : a === Math.max(y0, CY - (+r) + 1));
+      q.setAttribute("aria-pressed", on);
+    });
+  };
+  const apply = () => {
+    S.yA = +A.value; S.yB = +B.value; S.mapMonth = null;
     renderCalendar(); renderAnnual(); renderMapLayer(false); renderEvents(); renderStripes();
   };
-  $("yFrom").addEventListener("change", () => apply("from"));
-  $("yTo").addEventListener("change", () => apply("to"));
+  A.addEventListener("input", () => { if (+A.value > +B.value) A.value = B.value; paint(); });
+  B.addEventListener("input", () => { if (+B.value < +A.value) B.value = A.value; paint(); });
+  A.addEventListener("change", apply); B.addEventListener("change", apply);
+  document.querySelectorAll(".quick button").forEach((q) => q.addEventListener("click", () => {
+    const r = q.dataset.range;
+    A.value = r === "all" ? y0 : Math.max(y0, CY - (+r) + 1); B.value = CY;
+    paint(); apply();
+  }));
+  paint();
 }
 
 // ---------- Portada ----------
 function renderHero() {
-  const a = KPI.find((k) => k.id === "anio"), m = KPI.find((k) => k.id === "mes");
-  const z = zoneLabel(), Z1 = z[0].toUpperCase() + z.slice(1);
-  $("kicker").textContent = `Satélites de la NASA, datos hasta el ${DD} de ${MESES_L[CM - 1]} de ${CY}`;
-  const d = diffTxt(a.n, a.med);
-  $("headline").innerHTML = `${Z1} lleva <span class="num">${fmt(a.n)}</span> focos de calor en ${CY}`;
-  $("verdict").className = "verdict " + level(a.p);
-  $("verdict").innerHTML = `<span aria-hidden="true">${arrow(a.p)}</span> ${d[0].toUpperCase() + d.slice(1)} a estas alturas del año.`;
-  $("subline").innerHTML = `Este mes va <span class="lvl">${levelTxt(m.p).replace("dentro de lo habitual", "normal")}</span>: ${fmt(m.n)} focos hasta el día ${DD}, cuando lo habitual son ${fmt(m.med)}. ` +
-    `<a href="#" id="whatLink">¿Qué es un foco de calor?</a>`;
-  $("whatLink").onclick = (e) => { e.preventDefault(); $("help").showModal(); };
+  // Sin bloque de portada: el resumen en palabras queda en la pestaña Resumen
+  document.title = `Fuego en Europa · ${zoneLabel()}`;
+  $("dataDate").textContent = `Datos hasta el ${DD} de ${MESES_L[CM - 1]} de ${CY}`;
 }
-
 // ---------- Guía y asistente ----------
 function initHelp() {
   $("helpBtn").addEventListener("click", () => $("help").showModal());
@@ -98,6 +111,12 @@ function initAssistant() {
   const btn = $("assistantBtn"), panel = $("assistantPanel");
   const toggle = (open) => { panel.hidden = !open; btn.setAttribute("aria-expanded", open); if (open) $("ask").focus(); };
   btn.addEventListener("click", () => toggle(panel.hidden));
+  // En el móvil el botón flotante taparía la barra de años: se aparta mientras está en pantalla
+  if ("IntersectionObserver" in window) {
+    const box = document.querySelector(".assistant");
+    new IntersectionObserver(([e]) => box.classList.toggle("fab-away", e.isIntersecting && innerWidth <= 560 && panel.hidden), { threshold: 0 })
+      .observe(document.querySelector(".map-bottom"));
+  }
   $("assistantClose").addEventListener("click", () => { toggle(false); btn.focus(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden) { toggle(false); btn.focus(); } });
   $("askForm").addEventListener("submit", (e) => { e.preventDefault(); const q = $("ask").value.trim(); if (q) answer(q); });
@@ -160,7 +179,15 @@ function answer(q) {
   }
 }
 
+// Altura real de la barra superior, para que las pestañas queden justo debajo al hacer scroll
+function trackBar() {
+  const bar = document.querySelector(".bar");
+  const set = () => document.documentElement.style.setProperty("--bar-h", bar.offsetHeight + "px");
+  set(); if ("ResizeObserver" in window) new ResizeObserver(set).observe(bar);
+}
+
 function initUI() {
+  trackBar();
   initZone(); initYears(); initTabs(); initHelp(); initAssistant();
   document.querySelectorAll("input[name=mode]").forEach((r) => r.addEventListener("change", () => { S.mode = r.value; renderCalendar(); }));
   $("nums").addEventListener("change", renderCalendar);

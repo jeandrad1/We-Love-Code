@@ -31,30 +31,49 @@
       <label>Radio (km) <input id="rad" type="number" step="10" value="150" inputmode="numeric"></label>
       <button id="applyCircle" type="button" class="primary">Ver zona</button>
     </div>
-    <label class="ctl"><span>Desde</span><select id="yFrom"></select></label>
-    <label class="ctl"><span>Hasta</span><select id="yTo"></select></label>
   </div>
+  <span id="dataDate" class="status"></span>
   <button id="helpBtn" class="quiet" type="button">Cómo se usa</button>
 </header>
 <p id="zoneHint" class="hint" role="status" hidden></p>
 <div id="synthetic" class="banner" hidden>Estás viendo datos de prueba inventados, no detecciones reales.</div>
 
 <main id="contenido">
-  <!-- Portada: Europa de noche con sus fuegos -->
-  <section class="hero" aria-label="Mapa y resumen">
-    <div id="map" aria-label="Mapa de focos de calor en Europa"></div>
-    <div class="hero-panel">
-      <p class="kicker" id="kicker">Cargando datos de los satélites…</p>
-      <h1 id="headline" aria-live="polite"></h1>
-      <p id="verdict" class="verdict"></p>
-      <p id="subline" class="subline"></p>
-      <fieldset class="seg" aria-label="Qué muestra el mapa">
-        <label><input type="radio" name="mapView" value="calor" checked><span>Dónde se quema</span></label>
-        <label><input type="radio" name="mapView" value="paises"><span>Frente a lo habitual</span></label>
-        <label><input type="radio" name="mapView" value="focos"><span>Focos de un mes</span></label>
-      </fieldset>
-      <div id="mapLegend" class="legend"></div>
-      <p id="mapnote" class="mapnote" aria-live="polite"></p>
+  <!-- Mapa: Europa de noche con sus fuegos -->
+  <section class="map-section" aria-label="Mapa de focos de calor">
+    <div class="map-card">
+      <div id="map" aria-label="Mapa de focos de calor en Europa"></div>
+      <div class="map-top">
+        <fieldset class="seg" aria-label="Qué muestra el mapa">
+          <label><input type="radio" name="mapView" value="calor" checked><span>Dónde se quema</span></label>
+          <label><input type="radio" name="mapView" value="paises"><span>Frente a lo habitual</span></label>
+          <label><input type="radio" name="mapView" value="focos"><span>Focos de un mes</span></label>
+        </fieldset>
+      </div>
+      <div class="map-bottom">
+        <div class="time-strip" role="group" aria-labelledby="tsLabel">
+        <div class="ts-head">
+          <span id="tsLabel" class="ts-label">Años</span>
+          <output id="tsRange" class="ts-range" aria-live="polite">2000 – 2026</output>
+          <div class="quick" role="group" aria-label="Atajos de años">
+            <button type="button" data-range="all">Todo</button>
+            <button type="button" data-range="10">10 años</button>
+            <button type="button" data-range="1">Este año</button>
+          </div>
+        </div>
+        <div class="dual">
+          <div class="dual-track"><div class="dual-fill" id="dualFill"></div></div>
+          <input type="range" id="yFrom" aria-label="Desde el año" step="1">
+          <input type="range" id="yTo" aria-label="Hasta el año" step="1">
+        </div>
+        <div class="ts-ticks" id="tsTicks" aria-hidden="true"></div>
+      </div>
+        <div id="mapLegend" class="legend map-legend" aria-label="Leyenda del mapa"></div>
+      </div>
+      <p id="touchHint" class="touch-hint" hidden>Toca el mapa para moverlo</p>
+    </div>
+    <div class="map-foot">
+      <p id="mapnote" class="mapnote" aria-live="polite">Cargando datos de los satélites…</p>
       <details class="sat">
         <summary>Foto del satélite de un día</summary>
         <div class="row">
@@ -182,9 +201,9 @@
     <div id="answer" class="answer" aria-live="polite" hidden></div>
     <p class="note">Por ejemplo: «¿cómo va Grecia este año?», «¿cuándo se quema en Ucrania?», «el mayor incendio de Portugal», «¿qué países van peor?», «enséñame el salto de 2012».</p>
   </div>
-  <button id="assistantBtn" class="fab" type="button" aria-expanded="false" aria-controls="assistantPanel">
+  <button id="assistantBtn" class="fab" type="button" aria-expanded="false" aria-controls="assistantPanel" aria-label="Pregúntale">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12h-2Z" fill="currentColor"/></svg>
-    Pregúntale
+    <span class="fab-txt">Pregúntale</span>
   </button>
 </div>
 
@@ -207,7 +226,7 @@
 
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <footer>
-  <p>Focos de calor: NASA FIRMS (MODIS y VIIRS). Fotos: NASA GIBS. Área quemada: GWIS / Copernicus vía Our World in Data. Mapa base: © OpenStreetMap, © CARTO.</p>
+  <p>Focos de calor: NASA FIRMS (MODIS y VIIRS). Fotos: NASA GIBS. Área quemada: GWIS / Copernicus vía Our World in Data. Mapa base: © Esri y © OpenStreetMap (o CARTO si se configura su clave).</p>
   <p>NASA Space Apps Challenge 2026, reto «Harmonization of MODIS and VIIRS Hot Spots» propuesto por CONAE.</p>
 </footer>
 

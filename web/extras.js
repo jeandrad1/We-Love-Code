@@ -130,7 +130,7 @@ async function focusEvent(e) {
   if (!items.length) { items.push({ lat: e.lat, lon: e.lon, r: 22, rgb: rgbOf(ramp(THERMAL, 0.85)), a: 0.9 }); ll.push([e.lat, e.lon]); }
   glow.set(items);
   const b = L.latLngBounds(ll).pad(0.8);
-  map.fitBounds(b, { maxZoom: 11, paddingTopLeft: [innerWidth > 1000 ? Math.min(520, innerWidth * 0.46) : 20, 20] });
+  map.fitBounds(b, { maxZoom: 11, paddingTopLeft: [20, innerWidth > 560 ? 60 : 70], paddingBottomRight: [50, innerWidth > 560 ? 110 : 150] });
   $("gibsDate").value = new Date(DAY0 + e.peak * 864e5).toISOString().slice(0, 10);
   $("gibsOn").checked = true; updateGibs();
   $("mapLegend").innerHTML = `<span>primer día</span><div class="ramp" style="background:linear-gradient(90deg,${THERMAL.slice(3).join(",")})"></div><span>último día</span>`;
