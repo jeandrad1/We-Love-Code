@@ -1,95 +1,79 @@
-# Calendario de quemas de Andalucía 🔥🛰
+# Fuego en Europa
 
-NASA Space Apps Challenge 2026 · Reto *Harmonization of MODIS and VIIRS Hot Spots* (CONAE)
+NASA Space Apps Challenge 2026, reto *Harmonization of MODIS and VIIRS Hot Spots* (propuesto por CONAE).
 
-Una serie única de puntos calientes de 2000 a hoy para Andalucía, que combina MODIS (Terra/Aqua, 1 km) y VIIRS (S-NPP, NOAA-20 y NOAA-21, 375 m), y una web para consultarla por provincia, por zona dibujada o por coordenadas.
+Un calendario de focos de calor para 40 países europeos, de 2000 a hoy. Combina MODIS (Terra y Aqua, 1 km) y VIIRS (S-NPP, NOAA-20 y NOAA-21, 375 m) en una sola serie comparable, y lo muestra en una web: mapa de Europa de noche con sus fuegos, calendario por meses, comparación con lo habitual, incendios y descargas.
 
-> ⚠ Los datos que trae `web/data/` ahora mismo son **sintéticos**, solo para probar (la web lo avisa con un banner). Sigue los pasos 1–3 con tu clave de FIRMS para generar los reales.
+**Europa** son aquí la UE-27, Reino Unido, Noruega, Suiza, Islandia, los Balcanes, Ucrania, Moldavia y Bielorrusia. Rusia queda fuera. La lista está en `pipeline/config.py`.
+
+> Los datos que trae `web/data/` son **sintéticos** (la web lo avisa con un banner). Para usar los reales, sigue los pasos 1–3.
+
+## 1. Instalar
+
+```bash
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## 2. Descargar los datos
+
+```bash
+cd pipeline
+python 00_countries.py                    # polígonos de los países (Natural Earth)
+export FIRMS_MAP_KEY=89a4b097fa2024d4a25f619a406e05dc             # https://firms.modaps.eosdis.nasa.gov/api/map_key/
+python 01_download_firms.py               # años completos + año en curso
+```
+
+- **Años completos:** salen de los resúmenes anuales por país de FIRMS (un zip por año e instrumento, con un CSV por país): https://firms.modaps.eosdis.nasa.gov/country/. El script prueba la ruta habitual de esos zips. Si no la encuentra, descárgalos a mano desde esa página y déjalos tal cual en `data/raw/country/`. Son grandes (todo el mundo), así que empezad cuanto antes.
+- **Alternativa:** el formulario *Archive Download* de FIRMS, dibujando un polígono de Europa. Los CSV van a `data/raw/archive/`.
+- **Año en curso:** se descarga por la API (NRT) en teselas de 10°. Antes de la demo, repetid `python 01_download_firms.py --solo-reciente`.
+
+## 3. Procesar
+
+```bash
+python 02_clean.py        # esquema común, calidad, país de cada foco, fuentes fijas de calor
+python 03_harmonize.py    # factores MODIS→VIIRS por país + validación
+python 04_aggregate.py    # datos para la web (añadid --sinteticos solo con datos de prueba)
+python 05_reported.py     # área quemada por país (GWIS / Copernicus, vía Our World in Data)
+```
+
+Con 8 millones de focos de prueba, los pasos 02–04 tardan unos 3 minutos.
+
+## 4. Ver y publicar la web
+
+```bash
+cd web && python -m http.server 8000     # http://localhost:8000
+```
+
+Para publicarla en GitHub Pages: subid el repositorio y elegid *Settings → Pages → Source: GitHub Actions*. El flujo `.github/workflows/pages.yml` publica la carpeta `web/`.
+
+## Método
+
+- **Unidad común: focos equivalentes VIIRS S-NPP.** Cada mes se cuenta con un solo satélite (S-NPP > NOAA-20 > NOAA-21 > Terra+Aqua > Terra), nunca sumando.
+- **Un factor MODIS→VIIRS por país**, calibrado en el solape 2012–2020, con intervalo del 90 % por bootstrap de años. Hace falta uno por país porque el tipo de fuego cambia mucho: en el Mediterráneo hay grandes incendios forestales que MODIS ve bien; en el este, muchas quemas agrícolas pequeñas que MODIS se pierde. Los países con menos de 400 detecciones MODIS en el solape usan el factor europeo.
+- **NOAA-20 y NOAA-21** se calibran contra S-NPP. El factor `a` cubre los meses anteriores a Aqua.
+- **Validación:** se esconde un año del solape, se estima VIIRS a partir de MODIS y se compara con la realidad. Se hace por país y para Europa, comparando tres opciones: sin corregir, factor europeo y factor por país.
+- **Limpieza:** se descartan las detecciones de baja confianza y las fuentes fijas de calor: celdas de ~1 km con VIIRS en 25 días o más repartidos en 8 meses o más del año (industria, antorchas, plantas solares). Las quemas agrícolas se repiten, pero en pocos meses, y se conservan.
+- **Incendios:** los focos a ≤2 km y ≤2 días entre sí se unen en un incendio. Se guardan los de 15 focos o más.
+- **La web no carga millones de puntos.** Carga series por país, una rejilla de ~50 km para mapas y zonas dibujadas, los incendios y los focos individuales de los últimos 24 meses.
+
+Limitaciones:
+- Las zonas dibujadas se calculan con celdas de ~50 km, así que son aproximadas.
+- Un mes sin focos puede deberse a nubes.
+- El área quemada de GWIS es otra medición por satélite, no una estadística oficial. Si conseguís las tablas oficiales de EFFIS por país, ponedlas en `data/raw/reportado_extra.csv` con las columnas `iso,year,incendios,hectareas_oficiales` y la web las ofrecerá también.
 
 ## Estructura
 
 ```
-pipeline/
-  config.py               región, fuentes, filtros y ventana de calibración
-  01_download_firms.py    descarga FIRMS por API (reanudable)
-  02_clean.py             esquema común, confianza, recorte a Andalucía, fuentes estáticas
-  03_harmonize.py         factores MODIS→VIIRS por mes + IC bootstrap + validación
-  04_export_web.py        datos compactos para la web
-tests/make_synthetic.py   genera CSV sintéticos con formato FIRMS
-web/                      web estática (sin backend): index.html, app.js, style.css, data/
-data/andalucia.geojson    polígono de Andalucía (Natural Earth, simplificado)
+pipeline/  config.py, 00_countries.py … 05_reported.py
+tests/     make_synthetic.py (datos de prueba para Europa)
+web/       index.html, style.css, app.js (núcleo), map.js (mapa), extras.js (países, incendios, franjas), ui.js (portada, pestañas, voz)
 ```
 
-## 1 · Instalar
+## Ideas para la demo
 
-```bash
-python -m venv .venv && source .venv/bin/activate   # en Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-## 2 · Datos reales
-
-1. Pide una MAP_KEY gratuita: https://firms.modaps.eosdis.nasa.gov/api/map_key/
-2. **Hacedlo ya**, en paralelo: en https://firms.modaps.eosdis.nasa.gov/download/ pedid el archivo de **España**, en CSV, para MODIS C6.1, VIIRS S-NPP, VIIRS NOAA-20 y VIIRS NOAA-21, desde 2000. Llega por email y puede tardar. Dejad los CSV tal cual en `data/raw/archive/`.
-3. Mientras tanto, o en vez de eso, por API:
-   ```bash
-   export FIRMS_MAP_KEY=xxxx
-   python pipeline/01_download_firms.py            # todo; reanudable si se corta
-   python pipeline/01_download_firms.py --start 2026-09-01   # solo lo reciente (NRT)
-   ```
-   **Antes de la demo**, vuelve a lanzar la segunda línea para que el "mes en curso" esté al día.
-
-## 3 · Procesar
-
-```bash
-cd pipeline
-python 02_clean.py
-python 03_harmonize.py      # imprime los factores y la validación
-python 04_export_web.py     # (para datos de prueba: --synthetic)
-```
-
-## 4 · Ver la web
-
-```bash
-cd web && python -m http.server 8000     # abre http://localhost:8000
-```
-
-Para publicarla, sube la carpeta `web/` a GitHub Pages o Netlify. Es estática y no necesita servidor.
-
-## Método de armonización
-
-- **Unidad común:** puntos calientes *equivalentes VIIRS S-NPP*. El futuro es VIIRS, así que la serie sigue sin saltos cuando MODIS y S-NPP se apagan.
-- **Calibración por mes del año** (con ventana ±1 mes), porque la proporción VIIRS/MODIS depende del tipo de fuego. Las quemas agrícolas son pequeñas y MODIS ve pocas; los incendios de verano son grandes.
-  - `r[m]` = S-NPP / (Terra+Aqua), en el solape 2012–2020. Se corta en 2020 porque las órbitas de Terra y Aqua derivan después.
-  - `a[m]` = (Terra+Aqua) / Terra, para 2000-11 → 2002-06, cuando aún no existía Aqua.
-  - `k20[m]`, `k21[m]` = S-NPP / NOAA-20 y S-NPP / NOAA-21, para continuar la serie tras S-NPP.
-- **Una sola fuente por mes**, sin sumar nunca sensores: S-NPP > NOAA-20 > NOAA-21 > MODIS. Cada punto lleva una categoría que indica qué factor le aplica, así que la web recalcula la serie para cualquier polígono.
-- **Incertidumbre:** intervalo del 90 % por bootstrap de años, que se muestra en la web y en el CSV.
-- **Validación:** se deja un año fuera dentro del solape, más una prueba fuera de ventana (2021+). Se compara con "sin armonizar" y con "factor único sin estacionalidad".
-- **Limpieza:** se quita la confianza baja, se queda solo `type = 0` y se descartan fuentes estáticas: celdas de ~1 km con VIIRS en ≥25 días distintos repartidos en ≥8 meses del año (industria, termosolares). Las quemas agrícolas se repiten, pero en pocos meses, y se conservan.
-
-Limitaciones: los factores son regionales (toda Andalucía) y se aplican a cualquier subzona; en zonas pequeñas, fíjate en el intervalo. Un mes sin detecciones puede deberse a nubes.
-
-## Asistente de voz e imagen del día
-
-- **Voz:** botón «Pulsa y habla» (Web Speech API; funciona en Chrome y usa el reconocimiento de Google, así que necesita internet). Las preguntas se interpretan con reglas en `app.js` (función `interpret`), sin LLM ni servidor: provincias, «este mes», «anomalías», «sin armonizar / salto», «cuándo se quema», «peor año», «imagen de agosto de 2022», «agosto de 2017». La respuesta se lee en voz alta y se escribe en el panel. Si el micrófono falla, la caja de texto hace lo mismo.
-- **Imagen del día (NASA GIBS):** sustituye el mapa base por la imagen de satélite del día elegido: MODIS Terra antes de 2012, VIIRS S-NPP de 2012 a 2019 y NOAA-20 después. Hay dos opciones: color real (se ve el humo) o falso color (se ven las zonas quemadas). Al pulsar una celda del calendario, el mapa se filtra a ese mes y muestra la imagen de su día con más detecciones.
-
-Para la demo: ensayad las frases exactas y llevad grabado un vídeo de reserva por si fallan el micrófono o la red.
-
-## Comparación con lo reportado (opcional, recomendable)
-
-Si existe `web/data/reported.csv` con columnas `year,provincia,incendios`, la web muestra la serie armonizada frente a los incendios oficiales y su correlación anual. Tienes una plantilla en `data/reported_PLANTILLA.csv`. Fuentes posibles:
-
-- Estadística General de Incendios Forestales (EGIF), MITECO: incendios por provincia y año.
-- REDIAM (Junta de Andalucía): áreas recorridas por el fuego.
-
-Usa `provincia = Andalucía` para el total regional y el nombre de la provincia para cada una.
-
-## Ideas para la demo (3 min)
-
-1. Modo **"Sin armonizar"**: el salto de 2012 parece un aumento de incendios, pero es el cambio de sensor.
-2. Modo **"Puntos armonizados"**: la serie es continua, y el panel de validación lo demuestra con números.
-3. Provincia de **Jaén o Córdoba**: con datos reales esperamos ver un pico en invierno y primavera por la quema de restos de poda del olivar, además del de verano. En las marismas del Guadalquivir (Sevilla), uno en otoño por la paja de arroz. Comprobadlo antes de contarlo, porque en los datos sintéticos está puesto a mano.
-4. **Mes en curso frente a la mediana** de los mismos días en años anteriores. Es la pregunta que haría un gestor del INFOCA.
-5. Descargar el CSV y el calendario en SVG.
+1. **Portada:** el mapa de Europa de noche y la frase «Europa lleva X focos de calor este año…».
+2. **Mapa «Frente a lo habitual»:** qué países van peor este año. Al pulsar uno, toda la web pasa a ese país.
+3. **Calendario «Sin corregir»:** el salto falso de 2012. Después, «Cantidad» con la serie corregida.
+4. **Incendios:** el más reciente comparado con los anteriores. Al pulsarlo se ve avanzar en el mapa, con la foto del satélite.
+5. **Voz:** «¿qué países van peor?», «el mayor incendio de Portugal».
