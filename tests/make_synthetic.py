@@ -1,9 +1,10 @@
-"""Genera focos SINTÉTICOS para Europa con el formato de FIRMS (CSV anuales por país + API del año en curso),
-para probar el pipeline y la web sin clave. NO son datos reales.
+"""Genera CSV con el formato de FIRMS pero SINTÉTICOS, para probar el pipeline sin clave.
 
-Regímenes simulados: incendios de verano en el Mediterráneo, quemas agrícolas de primavera y de rastrojo
-en el este (Ucrania, Moldavia, Bielorrusia, Polonia, Rumanía…), quemas de brezal en Reino Unido e Irlanda,
-pocos fuegos en el centro y el norte (con un año excepcional en Suecia). VIIRS ve más focos que MODIS.
+Simula: incendios de verano, quema de restos de poda de olivar (ene-abr, Jaén/Córdoba),
+quema de paja de arroz (oct-nov, marismas del Guadalquivir), dos fuentes estáticas, y que VIIRS
+ve ~3-5× más puntos que MODIS (más en fuegos pequeños). NO son datos reales.
+
+    python tests/make_synthetic.py && python pipeline/02_clean.py && ...
 """
 import json
 import sys
@@ -17,134 +18,107 @@ from shapely.geometry import shape
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
 import config as C  # noqa: E402
 
-rng = np.random.default_rng(11)
-SCALE = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
+rng = np.random.default_rng(7)
+aoi = shapely.union_all([shape(f["geometry"]) for f in json.load(open(C.AOI_GEOJSON))["features"]])
+shapely.prepare(aoi)
 END = pd.Timestamp("2026-11-13")
-LIFE = {"Terra": ("2000-11-01", END), "Aqua": ("2002-07-04", END), "SNPP": ("2012-01-20", "2026-10-31"),
-        "NOAA20": ("2018-04-01", END), "NOAA21": ("2023-02-01", END)}
-D0 = pd.Timestamp("2000-01-01")
-MED = {"PRT": 4, "ESP": 5, "ITA": 4, "GRC": 3, "HRV": 1, "ALB": 1, "MKD": .8, "MNE": .4, "CYP": .3, "FRA": 1.5, "BIH": .5, "SVN": .1, "MLT": .02}
-EAST = {"UKR": 14, "MDA": 1.5, "BLR": 3, "POL": 2.5, "LTU": 1, "LVA": .8, "EST": .4, "ROU": 5, "SRB": 2.5, "BGR": 3, "HUN": 1.5, "SVK": .5, "KOS": .3}
-ATL = {"GBR": 1.2, "IRL": .6, "ISL": .02}
-CEN = {"DEU": .6, "CZE": .3, "AUT": .15, "CHE": .05, "BEL": .1, "NLD": .1, "LUX": .02, "DNK": .1, "NOR": .2, "SWE": .4, "FIN": .3}
-SEASON = {  # perfil mensual (ene..dic)
-    "med": np.array([.3, .4, .6, .4, .3, .8, 2.4, 3.2, 2.2, 1.0, .5, .3]),
-    "east": np.array([.3, .4, 2.6, 3.0, .8, .4, 1.8, 2.2, 1.2, 1.4, .6, .2]),
-    "atl": np.array([.6, 1.4, 2.8, 2.4, 1.0, .4, .4, .4, .3, .3, .2, .3]),
-    "cen": np.array([.2, .3, .9, 1.2, .8, .7, 1.3, 1.3, .8, .5, .2, .1]),
-}
-REG = {**{k: ("med", v) for k, v in MED.items()}, **{k: ("east", v) for k, v in EAST.items()},
-       **{k: ("atl", v) for k, v in ATL.items()}, **{k: ("cen", v) for k, v in CEN.items()}}
-SIZE = {"med": (1.2, 0.25), "east": (3.0, 0.08), "atl": (2.2, 0.1), "cen": (2.0, 0.1)}  # pareto a, mínimo
-
-geo = {f["properties"]["iso"]: shape(f["geometry"]) for f in json.load(open(C.COUNTRIES_GEOJSON))["features"]}
-NE = {f["properties"]["ADM0_A3"]: f["properties"]["NAME"] for f in json.load(open(C.NE_COUNTRIES))["features"]}
+SAT_LIFE = {"Terra": ("2000-11-01", END), "Aqua": ("2002-07-04", END),
+            "SNPP": ("2012-01-20", "2026-10-31"), "NOAA20": ("2018-04-01", END), "NOAA21": ("2023-02-01", END)}
+SAT_PASS = {"Terra": 1030, "Aqua": 1330, "SNPP": 1330, "NOAA20": 1240, "NOAA21": 1420}  # hora local aprox.
 
 
-def pool(g, n=6000):
-    a, b, c, d = g.bounds; out = []
+def inside(lon, lat):
+    return shapely.contains_xy(aoi, lon, lat)
+
+
+def sample_in_box(n, box):
+    out = []
     while len(out) < n:
-        x = rng.uniform(a, c, n * 3); y = rng.uniform(b, d, n * 3)
-        ok = shapely.contains_xy(g, x, y); out += list(zip(x[ok], y[ok]))
+        lon = rng.uniform(box[0], box[2], n * 3)
+        lat = rng.uniform(box[1], box[3], n * 3)
+        ok = inside(lon, lat)
+        out += list(zip(lon[ok], lat[ok]))
     return np.array(out[:n])
 
 
+events = []  # (fecha, lon, lat, tamaño_relativo, días)
 days = pd.date_range("2000-11-01", END)
-dmonth = days.month.values - 1; dyear = days.year.values
-year_mult = {y: rng.lognormal(0, .3) for y in range(2000, 2027)}
-for y in (2003, 2007, 2017, 2022, 2025):
-    year_mult[y] *= 1.8
-ev = []
-for iso, (reg, rate) in REG.items():
-    if iso not in geo:
-        continue
-    P = pool(geo[iso])
-    lam = rate * SCALE * SEASON[reg][dmonth] * np.array([year_mult[y] for y in dyear]) * (1 + .01 * (dyear - 2000))
-    if iso == "SWE":
-        lam = lam * np.where((dyear == 2018) & (dmonth == 6), 25, 1)
-    n = rng.poisson(lam)
-    di = np.repeat(np.arange(len(days)), n)
-    loc = P[rng.integers(0, len(P), len(di))]
-    a_, mn = SIZE[reg]
-    size = np.minimum(mn + rng.pareto(a_, len(di)) * mn * 2, 12)
-    ev.append(pd.DataFrame({"day": di, "lon": loc[:, 0], "lat": loc[:, 1], "size": size, "iso": iso}))
-ev = pd.concat(ignore_index=True, objs=ev)
-ev["ndays"] = np.clip(1 + (ev["size"] * 1.2).astype(int), 1, 14)
-# Expande a días de actividad
-rep = ev.loc[ev.index.repeat(ev.ndays)].copy()
-rep["k"] = rep.groupby(level=0).cumcount()
-rep["day"] = rep.day + rep.k
-rep["sz"] = rep["size"] * np.exp(-.35 * rep.k)
-rep = rep[rep.day < len(days)]
-print(f"{len(ev):,} incendios simulados, {len(rep):,} incendio-días")
+year_mult = {y: rng.lognormal(0, 0.35) for y in range(2000, 2027)}
+for y in (2004, 2012, 2017, 2022, 2025):
+    year_mult[y] *= 2.0
+for d in days:
+    m, ym = d.month, year_mult[d.year] * (1 + 0.01 * (d.year - 2000))
+    # Incendios forestales (jun-oct, pico agosto)
+    lam = ym * 1.6 * np.exp(-((m - 8) ** 2) / 2.5)
+    for _ in range(rng.poisson(lam)):
+        lonlat = sample_in_box(1, (-7.5, 36.1, -1.7, 38.7))[0]
+        size = rng.pareto(1.3) + 0.3
+        events.append((d, *lonlat, size, int(min(1 + size * 1.5, 12))))
+    # Quema de poda de olivar (ene-abr) — fuegos pequeños
+    if m in (1, 2, 3, 4):
+        for _ in range(rng.poisson(ym * 3.0)):
+            lonlat = sample_in_box(1, (-4.9, 37.4, -2.8, 38.3))[0]
+            events.append((d, *lonlat, rng.uniform(0.05, 0.3), 1))
+    # Paja de arroz en las marismas (oct-nov)
+    if m in (10, 11):
+        for _ in range(rng.poisson(ym * 2.0)):
+            lonlat = sample_in_box(1, (-6.3, 36.95, -5.95, 37.25))[0]
+            events.append((d, *lonlat, rng.uniform(0.1, 0.5), 1))
 
-STATIC = [(5.9, 51.5), (23.4, 46.2), (-0.9, 37.6), (16.9, 52.4), (36.2, 49.9)]
-rows = []
-for sat, (a, b) in LIFE.items():
-    a = (pd.Timestamp(a) - D0).days; b = (pd.Timestamp(b) - D0).days
-    is_v = sat not in ("Terra", "Aqua")
-    sens = {"SNPP": 1.0, "NOAA20": .95, "NOAA21": .97}.get(sat, 1.0)
-    dd = (days[0] - D0).days + rep.day.values
-    ok = (dd >= a) & (dd <= b) & (rng.random(len(rep)) > .15)
-    r = rep[ok]; dd = dd[ok]
+STATIC = [(-6.25, 37.44), (-6.93, 37.20)]  # termosolar y polo industrial (ficticios aprox.)
+
+rows = {s: [] for s in SAT_LIFE}
+for sat, (a, b) in SAT_LIFE.items():
+    a, b = pd.Timestamp(a), pd.Timestamp(b)
+    is_v = sat != "Terra" and sat != "Aqua"
+    sens = {"SNPP": 1.0, "NOAA20": 0.93, "NOAA21": 0.97}.get(sat, 1.0)
+    for (d0, lon, lat, size, ndays) in events:
+        for k in range(ndays):
+            d = d0 + pd.Timedelta(days=k)
+            if not (a <= d <= b) or rng.random() < 0.15:  # nubes / sin paso
+                continue
+            sz = size * np.exp(-0.4 * k)
+            if is_v:
+                n = rng.poisson(sens * (0.8 + 6 * sz))
+                spread = 0.004
+            else:
+                pdet = 1 - np.exp(-2.2 * sz)
+                n = rng.poisson(1 + 1.2 * sz) if rng.random() < pdet else 0
+                spread = 0.008
+            for _ in range(n):
+                rows[sat].append((lat + rng.normal(0, spread), lon + rng.normal(0, spread), d,
+                                  max(1.0, rng.lognormal(np.log(5 + 30 * sz), 0.6))))
+    for (lon, lat) in STATIC:
+        for d in pd.date_range(max(a, pd.Timestamp("2009-01-01")), b):
+            if rng.random() < (0.35 if is_v else 0.08):
+                rows[sat].append((lat + rng.normal(0, 0.001), lon + rng.normal(0, 0.001), d, 8.0))
+
+out = C.RAW_ARCHIVE
+out.mkdir(parents=True, exist_ok=True)
+fname = {"Terra": "M-C61", "Aqua": "M-C61", "SNPP": "SV-C2", "NOAA20": "J1V-C2", "NOAA21": "J2V-C2"}
+frames = {}
+for sat, r in rows.items():
+    df = pd.DataFrame(r, columns=["latitude", "longitude", "date", "frp"])
+    df = df[inside(df.longitude.values, df.latitude.values)]
+    is_v = sat in ("SNPP", "NOAA20", "NOAA21")
+    df["acq_date"] = df.date.dt.strftime("%Y-%m-%d")
+    df["acq_time"] = [f"{SAT_PASS[sat] - 100 + rng.integers(-20, 20):04d}" for _ in range(len(df))]
+    df["scan"], df["track"] = (0.4, 0.4) if is_v else (1.0, 1.0)
+    df["satellite"] = {"Terra": "Terra", "Aqua": "Aqua", "SNPP": "N", "NOAA20": "N20", "NOAA21": "N21"}[sat]
+    df["instrument"] = "VIIRS" if is_v else "MODIS"
     if is_v:
-        n = rng.poisson(sens * (0.9 + 5 * r.sz.values)); spread = .004
+        df["confidence"] = rng.choice(["l", "n", "h"], len(df), p=[0.1, 0.7, 0.2])
+        df["bright_ti4"], df["bright_ti5"] = 330.0, 295.0
+        df["version"] = "2"
     else:
-        pdet = 1 - np.exp(-1.6 * r.sz.values)
-        n = np.where(rng.random(len(r)) < pdet, rng.poisson(1 + 1.1 * r.sz.values), 0); spread = .008
-    idx = np.repeat(np.arange(len(r)), n)
-    lon = r.lon.values[idx] + rng.normal(0, spread, len(idx)); lat = r.lat.values[idx] + rng.normal(0, spread, len(idx))
-    frp = np.maximum(1, rng.lognormal(np.log(5 + 25 * r.sz.values[idx]), .6))
-    rows.append(pd.DataFrame({"sat": sat, "d": dd[idx], "lon": lon, "lat": lat, "frp": frp.round(1), "iso": r.iso.values[idx]}))
-    sd = np.arange(max(a, (pd.Timestamp("2008-01-01") - D0).days), b + 1)
-    for (x, y) in STATIC:
-        keep = sd[rng.random(len(sd)) < (.3 if is_v else .07)]
-        rows.append(pd.DataFrame({"sat": sat, "d": keep, "lon": x + rng.normal(0, .001, len(keep)), "lat": y + rng.normal(0, .001, len(keep)), "frp": 9.0, "iso": "?"}))
-pts = pd.concat(rows, ignore_index=True)
-pts["date"] = D0 + pd.to_timedelta(pts.d, unit="D")
-pts["year"] = pts.date.dt.year
-pass_t = {"Terra": 1030, "Aqua": 1300, "SNPP": 1240, "NOAA20": 1150, "NOAA21": 1330}
-pts["acq_time"] = [f"{pass_t[s] + int(v):04d}" for s, v in zip(pts.sat, rng.integers(-40, 40, len(pts)))]
-print(f"{len(pts):,} focos simulados")
-
-# Asigna país real por posición (los de fuentes fijas y los que cruzan fronteras)
-from shapely import STRtree  # noqa: E402
-isos = list(geo); tree = STRtree([geo[i] for i in isos])
-pi, gi = tree.query(shapely.points(pts.lon.values, pts.lat.values), predicate="within")
-cty = np.full(len(pts), "", dtype=object); cty[pi] = np.array(isos)[gi]
-pts["cty"] = cty
-pts = pts[pts.cty != ""]
-
-C.RAW_COUNTRY.mkdir(parents=True, exist_ok=True)
-inst = {"Terra": "modis", "Aqua": "modis", "SNPP": "viirs-snpp", "NOAA20": "viirs-jpss1", "NOAA21": "viirs-jpss2"}
-satcol = {"Terra": "Terra", "Aqua": "Aqua", "SNPP": "N", "NOAA20": "N20", "NOAA21": "N21"}
-for f in C.RAW_COUNTRY.glob("*.csv"):
-    f.unlink()
-for d in C.RAW_API.glob("*"):
-    for f in d.glob("*.csv"):
-        f.unlink()
-
-
-def fmt(g, sat):
-    v = sat not in ("Terra", "Aqua")
-    out = pd.DataFrame({"latitude": g.lat.round(5), "longitude": g.lon.round(5),
-                        ("bright_ti4" if v else "brightness"): 330.0, "scan": .4 if v else 1.0, "track": .4 if v else 1.0,
-                        "acq_date": g.date.dt.strftime("%Y-%m-%d"), "acq_time": g.acq_time, "satellite": satcol[sat],
-                        "instrument": "VIIRS" if v else "MODIS",
-                        "confidence": rng.choice(["l", "n", "h"], len(g), p=[.1, .7, .2]) if v else rng.integers(10, 100, len(g)),
-                        "version": "2" if v else "6.1", ("bright_ti5" if v else "bright_t31"): 295.0, "frp": g.frp, "daynight": "D", "type": 0})
-    return out
-
-
-n_files = 0
-for (y, sat_inst, cty), g in pts.groupby(["year", pts.sat.map(inst), "cty"]):
-    if y >= 2026:
-        continue
-    name = NE.get(cty, cty).replace(" ", "_")
-    parts = [fmt(gg, s) for s, gg in g.groupby("sat")]
-    pd.concat(parts).to_csv(C.RAW_COUNTRY / f"{sat_inst}_{y}_{name}.csv", index=False); n_files += 1
-src = {"Terra": "MODIS_NRT", "Aqua": "MODIS_NRT", "SNPP": "VIIRS_SNPP_NRT", "NOAA20": "VIIRS_NOAA20_NRT", "NOAA21": "VIIRS_NOAA21_NRT"}
-for s_, g in pts[pts.year >= 2026].groupby(pts.sat.map(src)):
-    d = C.RAW_API / s_; d.mkdir(parents=True, exist_ok=True)
-    pd.concat([fmt(gg, s) for s, gg in g.groupby("sat")]).to_csv(d / "2026_sintetico.csv", index=False)
-print(f"{n_files} ficheros anuales por país + API 2026")
+        df["confidence"] = rng.integers(10, 100, len(df))
+        df["brightness"], df["bright_t31"] = 320.0, 295.0
+        df["version"] = "6.1"
+    df["daynight"] = "D"
+    df["type"] = 0
+    df["frp"] = df.frp.round(1)
+    frames.setdefault(fname[sat], []).append(df.drop(columns="date"))
+for k, fr in frames.items():
+    df = pd.concat(fr)
+    df.to_csv(out / f"fire_archive_{k}_SINTETICO.csv", index=False)
+    print(k, len(df))

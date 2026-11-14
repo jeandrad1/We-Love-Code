@@ -1,0 +1,155 @@
+{
+ "loyo": [
+  {
+   "year": 2012,
+   "observado": 20317,
+   "pred_mensual": 17398.76724185659,
+   "pred_factor_unico": 18334.36550626103,
+   "modis_bruto": 7340,
+   "mae_mensual": 305.1408243125107,
+   "mae_factor_unico": 242.87894174761075
+  },
+  {
+   "year": 2013,
+   "observado": 4019,
+   "pred_mensual": 4183.558604927323,
+   "pred_factor_unico": 4211.408752528078,
+   "modis_bruto": 1686,
+   "mae_mensual": 48.69216948999421,
+   "mae_factor_unico": 58.592470272673815
+  },
+  {
+   "year": 2014,
+   "observado": 5104,
+   "pred_mensual": 5500.2230673468075,
+   "pred_factor_unico": 5495.313911958347,
+   "modis_bruto": 2200,
+   "mae_mensual": 66.72878462922417,
+   "mae_factor_unico": 63.75736190599137
+  },
+  {
+   "year": 2015,
+   "observado": 6940,
+   "pred_mensual": 7533.14202321372,
+   "pred_factor_unico": 7533.5757993028965,
+   "modis_bruto": 3016,
+   "mae_mensual": 66.03157234872945,
+   "mae_factor_unico": 70.94486280247283
+  },
+  {
+   "year": 2016,
+   "observado": 2502,
+   "pred_mensual": 2655.915973141104,
+   "pred_factor_unico": 2667.7251172597785,
+   "modis_bruto": 1068,
+   "mae_mensual": 46.08256077027597,
+   "mae_factor_unico": 45.650953139119586
+  },
+  {
+   "year": 2017,
+   "observado": 9537,
+   "pred_mensual": 9889.997877721818,
+   "pred_factor_unico": 9976.49262016438,
+   "modis_bruto": 3994,
+   "mae_mensual": 58.20440667170794,
+   "mae_factor_unico": 53.98658505099187
+  },
+  {
+   "year": 2018,
+   "observado": 3203,
+   "pred_mensual": 3520.324801735016,
+   "pred_factor_unico": 3549.4732131330948,
+   "modis_bruto": 1421,
+   "mae_mensual": 55.48245259772199,
+   "mae_factor_unico": 62.124019249250544
+  },
+  {
+   "year": 2019,
+   "observado": 4015,
+   "pred_mensual": 3688.187032543382,
+   "pred_factor_unico": 3739.3113300916566,
+   "modis_bruto": 1497,
+   "mae_mensual": 56.924086068341786,
+   "mae_factor_unico": 57.53412725734038
+  },
+  {
+   "year": 2020,
+   "observado": 2411,
+   "pred_mensual": 2524.325063247368,
+   "pred_factor_unico": 2540.3337493007443,
+   "modis_bruto": 1017,
+   "mae_mensual": 27.63803194044608,
+   "mae_factor_unico": 24.060211282757425
+  }
+ ],
+ "fuera_ventana": [
+  {
+   "year": 2021,
+   "observado": 6322,
+   "pred_mensual": 6069.7112,
+   "pred_factor_unico": 6167.240931193253,
+   "modis_bruto": 2469,
+   "mae_mensual": 38.86300000000001,
+   "mae_factor_unico": 46.232296283546354
+  },
+  {
+   "year": 2022,
+   "observado": 9018,
+   "pred_mensual": 9234.0828,
+   "pred_factor_unico": 9352.025130169113,
+   "modis_bruto": 3744,
+   "mae_mensual": 55.77553333333335,
+   "mae_factor_unico": 72.38843467160088
+  },
+  {
+   "year": 2023,
+   "observado": 7700,
+   "pred_mensual": 8127.8321000000005,
+   "pred_factor_unico": 8312.911226816988,
+   "modis_bruto": 3328,
+   "mae_mensual": 62.55072500000002,
+   "mae_factor_unico": 79.94841286917108
+  },
+  {
+   "year": 2024,
+   "observado": 8596,
+   "pred_mensual": 8393.155200000001,
+   "pred_factor_unico": 8412.826025216233,
+   "modis_bruto": 3368,
+   "mae_mensual": 59.16791666666663,
+   "mae_factor_unico": 60.56106114720944
+  },
+  {
+   "year": 2025,
+   "observado": 11248,
+   "pred_mensual": 11696.971000000003,
+   "pred_factor_unico": 11887.363139549896,
+   "modis_bruto": 4759,
+   "mae_mensual": 101.25000000000006,
+   "mae_factor_unico": 117.81897528579833
+  },
+  {
+   "year": 2026,
+   "observado": 2072,
+   "pred_mensual": 2142.5459,
+   "pred_factor_unico": 2155.66177546366,
+   "modis_bruto": 863,
+   "mae_mensual": 22.17883,
+   "mae_factor_unico": 22.415706355695164
+  }
+ ],
+ "resumen_loyo": {
+  "err_anual_mediano_pct_mensual": 7.762991131402969,
+  "err_anual_mediano_pct_factor_unico": 6.86646749460382,
+  "err_anual_mediano_pct_sin_armonizar": 57.818332642057236,
+  "mae_mensual": 81.21387653655026,
+  "mae_factor_unico": 75.50328141202318
+ },
+ "resumen_fuera_ventana": {
+  "err_anual_mediano_pct_mensual": 3.697686716210724,
+  "err_anual_mediano_pct_factor_unico": 3.870856423258396,
+  "err_anual_mediano_pct_sin_armonizar": 58.416227390778296,
+  "mae_mensual": 56.63100083333335,
+  "mae_factor_unico": 66.56081443550353
+ }
+}
