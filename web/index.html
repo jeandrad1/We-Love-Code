@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendario de quemas · Andalucía</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="vendor/draw/leaflet.draw.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Calendario de quemas de Andalucía</h1>
+    <p class="sub">Puntos calientes MODIS + VIIRS armonizados en una única serie, de 2000 a hoy · NASA FIRMS</p>
+  </div>
+  <div id="status" class="status">Cargando datos…</div>
+</header>
+<div id="synthetic" class="banner" hidden>⚠ DATOS SINTÉTICOS DE PRUEBA: no son detecciones reales. Ejecuta el pipeline con tu clave de FIRMS.</div>
+
+<main>
+  <aside>
+    <section class="voice">
+      <h2>Pregúntale</h2>
+      <button id="mic" class="mic">🎤 Pulsa y habla</button>
+      <form id="askForm" class="row"><input id="ask" type="text" placeholder="o escribe: ¿cómo va Jaén este mes?"><button type="submit">→</button></form>
+      <div id="answer" class="answer" hidden></div>
+      <small>Prueba: «¿cómo va Málaga este mes?», «enséñame el salto de 2012», «anomalías en Jaén», «¿cuándo se quema en Córdoba?», «imagen de agosto de 2022», «peor año en Huelva».</small>
+    </section>
+    <section>
+      <h2>1 · Zona</h2>
+      <label><input type="radio" name="aoi" value="all" checked> Toda Andalucía</label>
+      <label><input type="radio" name="aoi" value="prov"> Provincia
+        <select id="prov"></select></label>
+      <label><input type="radio" name="aoi" value="draw"> Dibujar en el mapa <small>(rectángulo o polígono, arriba a la izquierda del mapa)</small></label>
+      <label><input type="radio" name="aoi" value="circle"> Coordenadas</label>
+      <div class="row">
+        <input id="lat" type="number" step="0.01" placeholder="lat" value="36.72">
+        <input id="lon" type="number" step="0.01" placeholder="lon" value="-4.42">
+        <input id="rad" type="number" step="1" placeholder="km" value="25" title="radio en km">
+        <button id="applyCircle">Aplicar</button>
+      </div>
+    </section>
+    <section>
+      <h2>2 · Periodo</h2>
+      <div class="row">
+        <label>Desde <input id="from" type="month"></label>
+        <label>Hasta <input id="to" type="month"></label>
+      </div>
+      <small>La mediana histórica usa siempre todos los años completos del registro.</small>
+    </section>
+    <section>
+      <h2>3 · Calendario</h2>
+      <label><input type="radio" name="mode" value="count" checked> Puntos armonizados</label>
+      <label><input type="radio" name="mode" value="anom"> Anomalía frente a la mediana</label>
+      <label><input type="radio" name="mode" value="raw"> Sin armonizar (sensor tal cual)</label>
+      <label class="inline"><input type="checkbox" id="nums" checked> Mostrar números</label>
+    </section>
+    <section>
+      <h2>Imagen del día · NASA GIBS</h2>
+      <label class="inline"><input type="checkbox" id="gibsOn"> Ver imagen de satélite en el mapa</label>
+      <div class="row">
+        <input id="gibsDate" type="date">
+        <select id="gibsBands">
+          <option value="true">Color real (humo)</option>
+          <option value="false">Falso color (zonas quemadas)</option>
+        </select>
+      </div>
+      <small>Pulsa una celda del calendario para ver ese mes en el mapa y la imagen de su día con más detecciones.</small>
+    </section>
+    <section>
+      <h2>4 · Descargas</h2>
+      <button id="dlPoints">CSV de puntos calientes</button>
+      <button id="dlCal">CSV del calendario y anomalías</button>
+      <button id="dlSvg">Imagen del calendario (SVG)</button>
+    </section>
+    <section class="method">
+      <h2>Cómo se armoniza</h2>
+      <p>MODIS (1 km) ve menos puntos que VIIRS (375 m). Se expresa todo en <b>puntos equivalentes VIIRS S-NPP</b>: en el solape <span id="ovl"></span> se calcula, para cada mes del año, cuántos puntos VIIRS hay por cada punto MODIS, y ese factor se aplica a los años solo-MODIS. NOAA-20/21 se calibran contra S-NPP para seguir la serie cuando S-NPP se apaga. Las bandas son intervalos del 90 % (bootstrap por años).</p>
+      <p>Se descartan detecciones de baja confianza y fuentes estáticas (industria, termosolares) <span id="nstatic"></span>.</p>
+    </section>
+  </aside>
+
+  <div class="content">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="card"><div id="map"></div><div class="legend-map"><span class="dot m"></span>MODIS <span class="dot v"></span>VIIRS <span class="sq"></span>fuente estática descartada <span id="mapnote"></span></div></div>
+      <div class="card">
+        <h3>Ciclo anual: ¿cuándo se quema?</h3>
+        <svg id="clim" class="chart"></svg>
+        <p class="note">Mediana y rango p10–p90 de todos los años completos, con el año en curso encima.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 id="calTitle">Calendario de actividad</h3>
+      <div id="cal"></div>
+      <div id="calLegend" class="cal-legend"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Total anual: el salto de 2012 desaparece</h3>
+        <svg id="annual" class="chart"></svg>
+        <p class="note">Sumar sensores tal cual crea un salto falso al entrar VIIRS. La serie armonizada es continua.</p>
+      </div>
+      <div class="card">
+        <h3>¿Funciona la armonización?</h3>
+        <div id="validation"></div>
+      </div>
+    </div>
+    <div class="card" id="reportedCard" hidden>
+      <h3>Detectado por satélite frente a lo reportado</h3>
+      <svg id="reported" class="chart"></svg>
+      <p class="note" id="reportedNote"></p>
+    </div>
+  </div>
+</main>
+<div id="tip" class="tip" hidden></div>
+<footer>Datos: NASA FIRMS (MODIS C6.1, VIIRS 375 m S-NPP / NOAA-20 / NOAA-21). Reto «Harmonization of MODIS and VIIRS Hot Spots», NASA Space Apps 2026 (CONAE).</footer>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/draw/leaflet.draw.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
