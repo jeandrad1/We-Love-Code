@@ -1,0 +1,218 @@
+{
+ "generado": "2026-11-14T16:59+00:00",
+ "ultimo_dato": "2026-11-13",
+ "k0": 10,
+ "nk": 313,
+ "rejilla": 0.5,
+ "recientes": [
+  "2024-12",
+  "2025-01",
+  "2025-02",
+  "2025-03",
+  "2025-04",
+  "2025-05",
+  "2025-06",
+  "2025-07",
+  "2025-08",
+  "2025-09",
+  "2025-10",
+  "2025-11",
+  "2025-12",
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
+  "2026-08",
+  "2026-09",
+  "2026-10",
+  "2026-11"
+ ],
+ "cobertura": {
+  "Terra": [
+   "2000-11-01",
+   "2026-11-13"
+  ],
+  "Aqua": [
+   "2002-07-04",
+   "2026-11-13"
+  ],
+  "NOAA20": [
+   "2018-04-01",
+   "2026-11-13"
+  ],
+  "NOAA21": [
+   "2023-02-01",
+   "2026-11-13"
+  ],
+  "SNPP": [
+   "2012-01-20",
+   "2026-10-31"
+  ]
+ },
+ "paises": [
+  {
+   "iso": "ALB",
+   "nombre": "Albania"
+  },
+  {
+   "iso": "AUT",
+   "nombre": "Austria"
+  },
+  {
+   "iso": "BEL",
+   "nombre": "B\u00e9lgica"
+  },
+  {
+   "iso": "BIH",
+   "nombre": "Bosnia y Herzegovina"
+  },
+  {
+   "iso": "BGR",
+   "nombre": "Bulgaria"
+  },
+  {
+   "iso": "BLR",
+   "nombre": "Bielorrusia"
+  },
+  {
+   "iso": "CHE",
+   "nombre": "Suiza"
+  },
+  {
+   "iso": "CYP",
+   "nombre": "Chipre"
+  },
+  {
+   "iso": "CZE",
+   "nombre": "Chequia"
+  },
+  {
+   "iso": "DEU",
+   "nombre": "Alemania"
+  },
+  {
+   "iso": "DNK",
+   "nombre": "Dinamarca"
+  },
+  {
+   "iso": "ESP",
+   "nombre": "Espa\u00f1a"
+  },
+  {
+   "iso": "EST",
+   "nombre": "Estonia"
+  },
+  {
+   "iso": "FIN",
+   "nombre": "Finlandia"
+  },
+  {
+   "iso": "FRA",
+   "nombre": "Francia"
+  },
+  {
+   "iso": "GBR",
+   "nombre": "Reino Unido"
+  },
+  {
+   "iso": "GRC",
+   "nombre": "Grecia"
+  },
+  {
+   "iso": "HRV",
+   "nombre": "Croacia"
+  },
+  {
+   "iso": "HUN",
+   "nombre": "Hungr\u00eda"
+  },
+  {
+   "iso": "IRL",
+   "nombre": "Irlanda"
+  },
+  {
+   "iso": "ISL",
+   "nombre": "Islandia"
+  },
+  {
+   "iso": "ITA",
+   "nombre": "Italia"
+  },
+  {
+   "iso": "KOS",
+   "nombre": "Kosovo"
+  },
+  {
+   "iso": "LTU",
+   "nombre": "Lituania"
+  },
+  {
+   "iso": "LUX",
+   "nombre": "Luxemburgo"
+  },
+  {
+   "iso": "LVA",
+   "nombre": "Letonia"
+  },
+  {
+   "iso": "MDA",
+   "nombre": "Moldavia"
+  },
+  {
+   "iso": "MKD",
+   "nombre": "Macedonia del Norte"
+  },
+  {
+   "iso": "MLT",
+   "nombre": "Malta"
+  },
+  {
+   "iso": "MNE",
+   "nombre": "Montenegro"
+  },
+  {
+   "iso": "NLD",
+   "nombre": "Pa\u00edses Bajos"
+  },
+  {
+   "iso": "NOR",
+   "nombre": "Noruega"
+  },
+  {
+   "iso": "POL",
+   "nombre": "Polonia"
+  },
+  {
+   "iso": "PRT",
+   "nombre": "Portugal"
+  },
+  {
+   "iso": "ROU",
+   "nombre": "Ruman\u00eda"
+  },
+  {
+   "iso": "SRB",
+   "nombre": "Serbia"
+  },
+  {
+   "iso": "SVK",
+   "nombre": "Eslovaquia"
+  },
+  {
+   "iso": "SVN",
+   "nombre": "Eslovenia"
+  },
+  {
+   "iso": "SWE",
+   "nombre": "Suecia"
+  },
+  {
+   "iso": "UKR",
+   "nombre": "Ucrania"
+  }
+ ],
+ "sinteticos": true
+}
