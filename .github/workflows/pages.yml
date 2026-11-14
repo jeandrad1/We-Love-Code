@@ -3,7 +3,7 @@ name: Publicar web en GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [v2]
   workflow_dispatch:
 
 permissions:
