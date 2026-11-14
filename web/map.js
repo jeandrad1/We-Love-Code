@@ -1,8 +1,13 @@
 /* Mapa: Europa de noche con una capa de «brillo» dibujada en canvas (los fuegos se suman como luz). */
 "use strict";
 
+// Clave de CARTO (opcional). Vacía = se usa el mapa base de Esri, que no necesita clave.
+// Ojo: en una web pública la clave queda a la vista; restríngela a tu dominio en el panel de CARTO.
+
+const CARTO_KEY = "cb1_595e_1_4eef2846f891644f3090a53b";
+
 let map, base, labels, gibs, glow, countryLayer, zoneLayer, drawn, drawTool = null;
-const EU_BOUNDS = [[34.5, -11], [70.5, 41]];
+const EU_BOUNDS = [[35, -10], [70, 40]];
 
 // Capa propia: dibuja manchas de luz con mezcla aditiva («lighter»), como se vería desde el espacio
 const GlowLayer = L.Layer.extend({
@@ -16,12 +21,12 @@ const GlowLayer = L.Layer.extend({
     this._draw();
   },
   onRemove(m) { L.DomUtil.remove(this._c); m.off("moveend zoomend resize", this._draw, this); },
-  set(items) { this.items = items; if (this._m) this._draw(); },
+  set(items, blend = "lighter") { this.items = items; this.blend = blend; if (this._m) this._draw(); },
   _draw() {
     const m = this._m, sz = m.getSize(), dpr = devicePixelRatio || 1, c = this._c;
     c.width = sz.x * dpr; c.height = sz.y * dpr; c.style.width = sz.x + "px"; c.style.height = sz.y + "px"; c.style.opacity = 1;
     L.DomUtil.setPosition(c, m.containerPointToLayerPoint([0, 0]));
-    const g = c.getContext("2d"); g.scale(dpr, dpr); g.globalCompositeOperation = "lighter";
+    const g = c.getContext("2d"); g.scale(dpr, dpr); g.globalCompositeOperation = this.blend || "lighter";
     for (const it of this.items) {
       const p = m.latLngToContainerPoint([it.lat, it.lon]);
       const r = it.deg ? Math.max(2, m.latLngToContainerPoint([it.lat, it.lon + it.deg]).x - p.x, p.y - m.latLngToContainerPoint([it.lat + it.deg, it.lon]).y) * 0.9 : it.r;
@@ -37,9 +42,18 @@ const rgbOf = (s) => s.match(/\d+/g).map(Number);
 function initMap() {
   map = L.map("map", { zoomSnap: 0.25, minZoom: 3, maxZoom: 12, worldCopyJump: false, attributionControl: true, zoomControl: false }).fitBounds(EU_BOUNDS);
   L.control.zoom({ position: "topright" }).addTo(map);
-  base = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", { attribution: "© OpenStreetMap © CARTO", subdomains: "abcd", maxZoom: 19 }).addTo(map);
+  tameMapScroll();
   map.createPane("labels"); map.getPane("labels").style.zIndex = 450; map.getPane("labels").style.pointerEvents = "none";
-  labels = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png", { pane: "labels", subdomains: "abcd", opacity: 0.55 }).addTo(map);
+  if (CARTO_KEY) {
+    // CARTO exige clave desde 2026 (gratis en carto.com/basemaps/apikey)
+    base = L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }).addTo(map);
+    labels = L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, { pane: "labels", opacity: 0.55 }).addTo(map);
+  } else {
+    // Sin clave: lienzo gris oscuro de Esri (gratuito, mismo esquema de fondo + etiquetas)
+    const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
+    base = L.tileLayer(esri + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Mapa base © Esri, © OpenStreetMap", maxNativeZoom: 16, maxZoom: 19 }).addTo(map);
+    labels = L.tileLayer(esri + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", { pane: "labels", maxNativeZoom: 16, maxZoom: 19, opacity: 0.7 }).addTo(map);
+  }
   gibs = L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.jpg",
     { layer: "VIIRS_NOAA20_CorrectedReflectance_TrueColor", time: D.meta.ultimo_dato, tileMatrixSet: "GoogleMapsCompatible_Level9", maxNativeZoom: 9, maxZoom: 12, attribution: "Imagen: NASA GIBS" });
   countryLayer = L.geoJSON(D.paises, {
@@ -106,11 +120,14 @@ async function renderMapLayer(fit) {
     const rec = D.meta.recientes, i = S.mapMonth != null ? S.mapMonth : NK - 1, name = `${yOf(i)}-${String(mOf(i)).padStart(2, "0")}`;
     if (rec.includes(name)) {
       const p = await loadMonth(name), items = [];
-      for (let t = 0; t < p.x.length; t++) {
+      // Con muchos focos la luz se suma y se satura: cada punto brilla menos cuantos más hay
+      const n = p.x.length, a0 = Math.max(0.12, Math.min(0.85, 2500 / Math.max(1, n))), rs = innerWidth < 560 ? 0.7 : 1;
+      for (let t = 0; t < n; t++) {
         const tf = Math.min(1, Math.log1p(p.f[t] / 10) / Math.log1p(300));
-        items.push({ lat: p.y[t] / 1000, lon: p.x[t] / 1000, r: 3 + 6 * tf, rgb: rgbOf(ramp(THERMAL, 0.45 + 0.55 * tf)), a: 0.85 });
+        items.push({ lat: p.y[t] / 1000, lon: p.x[t] / 1000, r: rs * (3 + 5 * tf), rgb: rgbOf(ramp(THERMAL, 0.45 + 0.55 * tf)), a: Math.max(0.35, a0) * (0.6 + 0.4 * tf) });
       }
-      glow.set(items);
+      items.sort((x, y) => x.r - y.r);   // los más intensos encima
+      glow.set(items, "source-over");
       lg.innerHTML = thermalLegend("fuego débil", "intenso");
       note.innerHTML = `${fmt(p.x.length)} focos de calor en ${MESES_L[mOf(i) - 1]} de ${yOf(i)}. Para ver otro mes, púlsalo en el Calendario.`;
       return;
@@ -128,15 +145,34 @@ async function renderMapLayer(fit) {
   note.textContent = S.mapMonth != null ? `${MESES_L[mOf(S.mapMonth) - 1]} de ${yOf(S.mapMonth)}.` :
     `Focos de calor por año entre ${S.yA} y ${S.yB}, en celdas de unos 50 km. Pulsa un país para verlo o elige «Dibujarla en el mapa» en Zona.`;
 }
-function setMapView(v) { S.mapView = v; document.querySelector(`input[name=mapView][value=${v}]`).checked = true; renderMapLayer(false); }
+function setMapView(v) { S.mapView = v; document.querySelector(`input[name=mapView][value=${v}]`).checked = true; return renderMapLayer(false); }
 function fitZone() {
-  const opt = { padding: [30, 30], paddingTopLeft: [innerWidth > 1000 ? Math.min(520, innerWidth * 0.46) : 20, 30] };
+  const opt = { paddingTopLeft: [20, innerWidth > 560 ? 60 : 70], paddingBottomRight: [50, innerWidth > 560 ? 110 : 150] };
   if (S.zone === "EU") map.fitBounds(EU_BOUNDS, opt);
   else if (S.zone === "circle" && zoneLayer) map.fitBounds(zoneLayer.getBounds(), opt);
   else if (S.zone === "draw" && drawn.getLayers().length) map.fitBounds(drawn.getBounds(), opt);
   else countryLayer.eachLayer((l) => { if (l.feature.properties.iso === S.zone) map.fitBounds(l.getBounds(), opt); });
 }
-function scrollToMap() { scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
+function scrollToMap() {
+  const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  const bar = innerWidth > 1000 ? document.querySelector(".bar").offsetHeight : 0;
+  scrollTo({ top: document.querySelector(".map-card").getBoundingClientRect().top + scrollY - bar - 10, behavior });
+}
+// La rueda del ratón desplaza la página; el mapa solo hace zoom con la rueda tras pulsarlo.
+// En pantallas táctiles, el dedo desplaza la página hasta que se toca el mapa una vez.
+function tameMapScroll() {
+  map.scrollWheelZoom.disable();
+  const card = document.querySelector(".map-card");
+  map.on("click", () => map.scrollWheelZoom.enable());
+  card.addEventListener("mouseleave", () => map.scrollWheelZoom.disable());
+  if (matchMedia("(pointer: coarse)").matches) {
+    map.dragging.disable(); if (map.tap) map.tap.disable();
+    const hint = $("touchHint"); hint.hidden = false;
+    map.on("click", () => { map.dragging.enable(); hint.hidden = true; });
+    // Al salir el mapa de la pantalla vuelve a dejar pasar el scroll
+    new IntersectionObserver(([e]) => { if (!e.isIntersecting) { map.dragging.disable(); hint.hidden = false; } }, { threshold: 0 }).observe(card);
+  }
+}
 
 // Pulsar un mes del calendario: ese mes en el mapa, con la foto de su día con más fuego
 async function focusMonth(y, m) {
@@ -148,8 +184,8 @@ async function focusMonth(y, m) {
     for (let t = 0; t < p.x.length; t++) if (inZonePoint(p.x[t] / 1000, p.y[t] / 1000) && (zoneIsCustom() || S.zone === "EU" || p.p[t] === S.zone)) c[p.d[t]] = (c[p.d[t]] || 0) + 1;
     const best = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
     if (best) day = new Date(DAY0 + best[0] * 864e5).getUTCDate();
-    setMapView("focos");
-  } else setMapView("calor");
+    await setMapView("focos");
+  } else await setMapView("calor");
   const dt = new Date(Date.UTC(y, m - 1, day));
   $("gibsDate").value = (dt > LAST ? LAST : dt).toISOString().slice(0, 10);
   updateGibs();
