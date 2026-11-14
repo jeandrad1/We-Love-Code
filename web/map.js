@@ -90,8 +90,7 @@ function initMap() {
   L.control.zoom({ position: "topright" }).addTo(map);
   base = L.tileLayer(
   "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png?api_key=" + CARTOCDN_API_KEY, 
-  { 
-    attribution: "© OpenStreetMap © CARTO", 
+  {
     subdomains: "abcd", 
     maxZoom: 19 
   }
@@ -115,7 +114,6 @@ function initMap() {
       tileMatrixSet: "GoogleMapsCompatible_Level9",
       maxNativeZoom: 9,
       maxZoom: 12,
-      attribution: "Imagen: NASA GIBS",
     },
   );
   countryLayer = L.geoJSON(D.paises, {
