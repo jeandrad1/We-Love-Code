@@ -70,3 +70,8 @@ EVENT_POINTS_TOP_COUNTRY = 10  # y los mayores de cada país
 EVENT_MAX_POINTS = 3000        # como mucho, focos guardados por incendio (muestra aleatoria)
 
 SAT_CODES = {"Terra": 0, "Aqua": 1, "SNPP": 2, "NOAA20": 3, "NOAA21": 4}
+
+# Almacén de puntos (06_points.py)
+POINTS_TILE_DEG = 5        # baja a 2.5 si algún fichero de tesela sale demasiado grande
+POINTS_CELL_DEG = 0.05     # granularidad espacial del orden dentro de cada tesela
+POINTS_ROW_GROUP = 50_000

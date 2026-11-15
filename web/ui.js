@@ -129,7 +129,7 @@ function initAssistant() {
   rec.onerror = (e) => { $("answer").hidden = false; $("answer").textContent = "I could not hear you (" + e.error + "). You can type the question."; };
   $("mic").addEventListener("click", () => { final = ""; speechSynthesis.cancel(); $("mic").classList.add("on"); $("mic").textContent = "Listening…"; rec.start(); });
 }
-const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[¿?¡!.,]/g, " ");
+const norm = (t) => t.toLowerCase().replace(/(\d),(\d{3})\b/g, "$1$2").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[¿?¡!.,]/g, " ");
 const COUNTRY_ALIASES = { CZE: ["czech republic"], GBR: ["uk", "britain", "great britain", "england"], MKD: ["macedonia"], NLD: ["holland", "the netherlands"], BIH: ["bosnia"], BLR: ["byelorussia"] };
 function setMode(mode) { S.mode = mode; document.querySelector(`input[name=mode][value=${mode}]`).checked = true; showTab("calendario"); }
 function interpret(text) {
@@ -138,11 +138,13 @@ function interpret(text) {
   const names = [];
   D.meta.paises.forEach((p) => { names.push([norm(p.nombre).trim(), p.iso]); (COUNTRY_ALIASES[p.iso] || []).forEach((a) => names.push([a, p.iso])); });
   names.sort((a, b) => b[0].length - a[0].length);
-  for (const [n, iso] of names) if (new RegExp("\b" + n + "\b").test(t)) { S.zone = iso; zoneChanged = true; break; }
+  for (const [n, iso] of names) if (new RegExp("\\b" + n + "\\b").test(t)) { S.zone = iso; zoneChanged = true; break; }
   if (!zoneChanged && /\beurope\b|whole continent/.test(t)) { S.zone = "EU"; zoneChanged = true; }
   if (zoneChanged) { S.event = null; S.mapMonth = null; drawn.clearLayers(); syncZone(); update(true); }
   const z = zoneLabel(), Z1 = z[0].toUpperCase() + z.slice(1);
-  const mesIdx = MESES_L.findIndex((mm) => t.includes(mm.toLowerCase())), yearM = t.match(/\b(20[0-2]\d)\b/);
+  const yearM = t.match(/\b(20[0-2]\d)\b/);
+  // Whole words only; "may" counts as the month only next to a year or after in/of/during (not "may I see…")
+  const mesIdx = MESES_L.findIndex((mm) => { const w = mm.toLowerCase(); return new RegExp("\\b" + w + "\\b").test(t) && (w !== "may" || !!yearM || /\b(in|of|during|last|this) may\b/.test(t)); });
   if (/uncorrected|unharmoni[sz]ed|raw data|\bjump\b|2012/.test(t) && !/photo|image|satellite photo|picture/.test(t)) {
     setMode("raw");
     const avg = (arr, a, b) => { let s = 0; for (let y = a; y <= b; y++) for (let m = 1; m <= 12; m++) { const i = iOf(y, m); if (i >= 0) s += arr[i]; } return s / (b - a + 1); };

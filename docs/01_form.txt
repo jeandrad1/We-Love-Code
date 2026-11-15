@@ -14,8 +14,7 @@ PyrOrbit Code is a web app that merges NASA's MODIS and VIIRS fire detections in
 PROJECT LINKS
 ---
 
---- Project Demonstration * (at most 7 slides OR a video of at most 30 s,
-    public link, no password or registration)
+--- 
 [DEMO URL]
 
 --- Project * (public link to the project)
@@ -70,7 +69,8 @@ Esri World Dark Gray Canvas - base map | https://www.arcgis.com/home/item.html?i
 OpenStreetMap - base map data | https://www.openstreetmap.org/copyright
 Leaflet - mapping library (BSD-2) | https://leafletjs.com/
 Leaflet.draw - drawing tools (MIT) | https://github.com/Leaflet/Leaflet.draw
-Archivo typeface (Google Fonts, OFL) | https://fonts.google.com/specimen/Archivo
-Python libraries: pandas, numpy, pyarrow, shapely, scipy, requests | https://pypi.org/
-CONAE - challenge proponent (Harmonization of MODIS and VIIRS Hot Spots) | https://www.argentina.gob.ar/ciencia/conae
+Pixabay - royalty-free stock videos used in the demo video (Pixabay Content License) | https://pixabay.com/
+FiftySounds - music "Antinatural" (demo video soundtrack) | https://www.fiftysounds.com/
+FiftySounds - music "Cronos" (demo video soundtrack) | https://www.fiftysounds.com/
+YouCut - video editing app used to make the demo video | https://play.google.com/store/apps/details?id=com.camerasideas.trimmer
 (To review)
