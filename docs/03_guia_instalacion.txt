@@ -18,7 +18,7 @@ REQUISITOS: Python 3.10+ y git. (requirements.txt: pandas, numpy, pyarrow, shape
    PowerShell:  $env:FIRMS_MAP_KEY="tu_clave"       Bash: export FIRMS_MAP_KEY=tu_clave
    cd pipeline
    python 00_countries.py
-   python 01_download_firms.py                   (anos completos + ano en curso; archivos grandes)
+   python 01_download_firms.py                   (años completos + año en curso; archivos grandes)
    python 01_download_firms.py --solo-reciente   (solo refrescar antes de la demo)
    python 02_clean.py
    python 03_harmonize.py

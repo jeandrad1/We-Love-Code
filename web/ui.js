@@ -161,8 +161,8 @@ function interpret(text) {
     const r = Object.values(COUNTRY_STATS).filter((c) => c.ytdMed > 20).sort((a, b) => ratioOf(b) - ratioOf(a)).slice(0, 3);
     S.zone = "EU"; syncZone(); setMapView("paises"); update(false); showTab("resumen");
     say.push(`Los países con más fuego respecto a lo habitual este año son ${r.map((c) => `${c.name} (${fmt(c.ytd)} focos, lo habitual son ${fmt(c.ytdMed)})`).join(", ")}.`);
-  } else if (/peor ano|record|ano con mas/.test(t) && REC.rec) say.push(`El año con más fuego en ${z} fue ${REC.rec[0]}, con unos ${fmt(REC.rec[1])} focos de calor.`);
-  if (!say.length || (/este ano|este mes|como va|como esta|ahora|hoy|situacion/.test(t) && say.length < 2)) {
+  } else if (/peor año|record|año con mas/.test(t) && REC.rec) say.push(`El año con más fuego en ${z} fue ${REC.rec[0]}, con unos ${fmt(REC.rec[1])} focos de calor.`);
+  if (!say.length || (/este año|este mes|como va|como esta|ahora|hoy|situacion/.test(t) && say.length < 2)) {
     const a = KPI.find((k) => k.id === "anio"), m = KPI.find((k) => k.id === "mes");
     say.push(`${Z1} lleva ${fmt(a.n)} focos de calor en ${CY}, ${diffTxt(a.n, a.med)} a estas alturas: ${levelTxt(a.p)}. Este mes van ${fmt(m.n)}, cuando lo habitual son ${fmt(m.med)}.`);
   }
