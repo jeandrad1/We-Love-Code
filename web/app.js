@@ -1,25 +1,30 @@
-/* Fuego en Europa — núcleo: carga de datos, zona elegida, cifras, calendario y gráficos.
-   Los datos ya vienen agregados por el pipeline (series por país, rejilla de ~50 km, incendios). */
+/* PyrOrbit Code — core: data loading, selected area, key figures, calendar and charts.
+   The data arrives already aggregated by the pipeline (country series, ~50 km grid, fires). */
 "use strict";
 
-const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-const MESES_L = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const MESES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MESES_L = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// English country names (the data files carry the Spanish ones)
+const COUNTRY_EN = { ALB: "Albania", AUT: "Austria", BEL: "Belgium", BIH: "Bosnia and Herzegovina", BGR: "Bulgaria", BLR: "Belarus", CHE: "Switzerland", CYP: "Cyprus", CZE: "Czechia", DEU: "Germany",
+  DNK: "Denmark", ESP: "Spain", EST: "Estonia", FIN: "Finland", FRA: "France", GBR: "United Kingdom", GRC: "Greece", HRV: "Croatia", HUN: "Hungary", IRL: "Ireland",
+  ISL: "Iceland", ITA: "Italy", KOS: "Kosovo", LTU: "Lithuania", LUX: "Luxembourg", LVA: "Latvia", MDA: "Moldova", MKD: "North Macedonia", MLT: "Malta", MNE: "Montenegro",
+  NLD: "Netherlands", NOR: "Norway", POL: "Poland", PRT: "Portugal", ROU: "Romania", SRB: "Serbia", SVK: "Slovakia", SVN: "Slovenia", SWE: "Sweden", UKR: "Ukraine" };
 const SATS = ["Terra", "Aqua", "S-NPP", "NOAA-20", "NOAA-21"];
 const INSTR = ["MODIS", "MODIS", "VIIRS", "VIIRS", "VIIRS"];
 const DAY0 = Date.UTC(2000, 0, 1);
-const nf = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 });
-const nf1 = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1 });
+const nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 
-// Rampas: térmica (cantidad, oscuro -> brillante) y divergente (menos / más que lo habitual)
+// Ramps: thermal (amount, dark -> bright) and diverging (less / more than usual)
 const THERMAL = ["#2A1B4A", "#4A1F66", "#74246E", "#9C2F68", "#C2445A", "#DE6345", "#F08A34", "#F6B53E", "#F9DD7A", "#FFF6CF"];
 const DIVERG = ["#4FA0E6", "#3F7FBA", "#3B5F86", "#4A5568", "#5F5A5E", "#8A4A3B", "#B9502F", "#E0583A", "#FF7A4A"];
 const COL = { corr: "#C77A22", modis: "#3A86CC", viirs: "#C9476C", raw: "#8A9AB0", ink: "#E6EDF6", grid: "#22354F", muted: "#9CB0C9", band: "rgba(156,176,201,.16)", normal: "#C8D4E3" };
 
 const S = { zone: "EU", geom: null, circle: null, mode: "count", mapView: "calor", mapMonth: null, yA: null, yB: null };
-const D = {};          // datos cargados
+const D = {};          // loaded data
 let NK, K0, LAST, CY, CM, DD, PARTIAL, EU, Z, BASE, KPI = [], REC = null, COUNTRY_NAME = {}, GRID_BY_CELL;
 
-// ---------- utilidades ----------
+// ---------- utilities ----------
 const $ = (id) => document.getElementById(id);
 const yOf = (i) => 2000 + Math.floor((K0 + i) / 12);
 const mOf = (i) => ((K0 + i) % 12) + 1;
@@ -53,7 +58,7 @@ function parseCSV(t) {
   const [h, ...rows] = t.trim().split(/\r?\n/), cols = h.split(",").map((c) => c.trim());
   return rows.map((r) => Object.fromEntries(r.split(",").map((v, i) => [cols[i], v.trim()])));
 }
-// Geometría
+// Geometry
 function inRing(x, y, ring) { let ins = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) ins = !ins; } return ins; }
 function inPoly(x, y, p) { if (!inRing(x, y, p[0])) return false; for (let h = 1; h < p.length; h++) if (inRing(x, y, p[h])) return false; return true; }
 function inGeom(x, y, g) { return g.type === "Polygon" ? inPoly(x, y, g.coordinates) : g.coordinates.some((p) => inPoly(x, y, p)); }
@@ -64,27 +69,27 @@ function inZonePoint(lon, lat) {
   return true;
 }
 
-// ---------- lenguaje llano ----------
-function level(p) { return p >= 80 ? "alto" : p <= 20 ? "bajo" : "normal"; }
-function levelTxt(p) { return p >= 90 ? "muy por encima de lo habitual" : p >= 80 ? "por encima de lo habitual" : p <= 10 ? "muy por debajo de lo habitual" : p <= 20 ? "por debajo de lo habitual" : "dentro de lo habitual"; }
-function levelWord(p) { return p >= 90 ? "Mucho más de lo habitual" : p >= 80 ? "Más de lo habitual" : p <= 10 ? "Mucho menos de lo habitual" : p <= 20 ? "Menos de lo habitual" : "Normal"; }
+// ---------- plain language ----------
+function level(p) { return p >= 80 ? "alto" : p <= 20 ? "bajo" : "normal"; }   // CSS class names, keep
+function levelTxt(p) { return p >= 90 ? "much higher than usual" : p >= 80 ? "higher than usual" : p <= 10 ? "much lower than usual" : p <= 20 ? "lower than usual" : "within the usual range"; }
+function levelWord(p) { return p >= 90 ? "Much more than usual" : p >= 80 ? "More than usual" : p <= 10 ? "Much less than usual" : p <= 20 ? "Less than usual" : "Normal"; }
 function arrow(p) { return p >= 90 ? "▲▲" : p >= 80 ? "▲" : p <= 10 ? "▼▼" : p <= 20 ? "▼" : "●"; }
 function yearsTxt(hist, v) {
   const n = hist.length; if (!n) return "";
   const lt = hist.filter((h) => h < v).length, gt = hist.filter((h) => h > v).length;
-  if (lt === n) return `el valor más alto de los ${n} años anteriores`;
-  if (gt === n) return `el valor más bajo de los ${n} años anteriores`;
-  if (lt === 0) return gt === 0 ? `igual que los ${n} años anteriores` : `menos que en ${gt} de ${n} años`;
-  return `más que en ${lt} de ${n} años`;
+  if (lt === n) return `the highest value of the previous ${n} years`;
+  if (gt === n) return `the lowest value of the previous ${n} years`;
+  if (lt === 0) return gt === 0 ? `same as the previous ${n} years` : `lower than in ${gt} of ${n} years`;
+  return `higher than in ${lt} of ${n} years`;
 }
 function diffTxt(v, med) {
-  if (!(med > 0)) return v > 0 ? "cuando normalmente apenas hay" : "como es habitual";
+  if (!(med > 0)) return v > 0 ? "when there are normally almost none" : "as usual";
   const r = (v - med) / med;
-  if (Math.abs(r) < 0.1) return "parecido a un año normal";
-  return r > 0 ? (r >= 1 ? `${nf1.format(1 + r)} veces lo normal` : `un ${Math.round(r * 100)} % más que un año normal`) : `un ${Math.round(-r * 100)} % menos que un año normal`;
+  if (Math.abs(r) < 0.1) return "similar to a normal year";
+  return r > 0 ? (r >= 1 ? `${nf1.format(1 + r)} times normal` : `${Math.round(r * 100)}% more than a normal year`) : `${Math.round(-r * 100)}% less than a normal year`;
 }
 
-// ---------- carga ----------
+// ---------- loading ----------
 async function load() {
   const j = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u); return r.json(); });
   const [meta, paises, series, parcial, diario, rejilla, incendios, fac, val, fijas] = await Promise.all([
@@ -92,15 +97,15 @@ async function load() {
     j("data/rejilla.json"), j("data/incendios.json"), j("data/factores.json"), j("data/validacion.json"),
     j("data/fuentes_fijas.geojson").catch(() => ({ features: [] }))]);
   Object.assign(D, { meta, paises, series, parcial, diario, rejilla, incendios, fac, val, fijas });
-  try { const r = await fetch("data/reportado.csv"); if (r.ok) D.reportado = parseCSV(await r.text()); } catch (e) { /* opcional */ }
+  try { const r = await fetch("data/reportado.csv"); if (r.ok) D.reportado = parseCSV(await r.text()); } catch (e) { /* optional */ }
   K0 = meta.k0; NK = meta.nk;
   LAST = new Date(meta.ultimo_dato + "T00:00:00Z");
   CY = LAST.getUTCFullYear(); CM = LAST.getUTCMonth() + 1; DD = LAST.getUTCDate();
   const nx = new Date(LAST); nx.setUTCDate(nx.getUTCDate() + 1); PARTIAL = nx.getUTCDate() !== 1;
-  meta.paises.forEach((p) => (COUNTRY_NAME[p.iso] = p.nombre));
-  // Totales de Europa
+  meta.paises.forEach((p) => { p.nombre = COUNTRY_EN[p.iso] || p.nombre; COUNTRY_NAME[p.iso] = p.nombre; });
+  // Europe totals
   EU = {}; for (const key of ["h", "lo", "hi", "naive", "modis", "viirs"]) { EU[key] = new Float64Array(NK); for (const iso in series) series[iso][key].forEach((v, i) => (EU[key][i] += v)); }
-  // Rejilla agrupada por celda
+  // Grid grouped by cell
   const R = rejilla; GRID_BY_CELL = R.celdas.map(() => []);
   for (let t = 0; t < R.c.length; t++) GRID_BY_CELL[R.c[t]].push(t);
   S.yA = yOf(0); S.yB = CY;
@@ -108,8 +113,8 @@ async function load() {
 const validMonth = (i) => i >= 0 && i < NK && !!D.fac.choice[`${yOf(i)}-${String(mOf(i)).padStart(2, "0")}`];
 const monthSource = (i) => D.fac.choice[`${yOf(i)}-${String(mOf(i)).padStart(2, "0")}`];
 
-// ---------- zona elegida ----------
-function zoneLabel() { return S.zone === "EU" ? "Europa" : S.zone === "draw" ? "la zona dibujada" : S.zone === "circle" ? `un radio de ${S.circle ? S.circle.km : "?"} km` : COUNTRY_NAME[S.zone]; }
+// ---------- selected area ----------
+function zoneLabel() { return S.zone === "EU" ? "Europe" : S.zone === "draw" ? "the drawn area" : S.zone === "circle" ? `a ${S.circle ? S.circle.km : "?"} km radius` : COUNTRY_NAME[S.zone]; }
 function zoneIsCustom() { return S.zone === "draw" || S.zone === "circle"; }
 function cellsInZone() {
   const g = D.rejilla.deg, out = [];
@@ -134,7 +139,7 @@ function computeZone() {
     z.ncells = cells.size;
   }
   Z = z;
-  // Línea base por mes del año: meses completos (sin el mes en curso a medias ni el año 2000)
+  // Baseline per calendar month: complete months only (no half-finished current month, no year 2000)
   const lastFull = PARTIAL ? NK - 2 : NK - 1;
   BASE = [];
   for (let m = 1; m <= 12; m++) {
@@ -144,20 +149,20 @@ function computeZone() {
   }
 }
 
-// ---------- cifras clave ----------
+// ---------- key figures ----------
 function computeKPIs() {
   const years = D.parcial.anios, box = [];
   const histYears = years.filter((y) => y >= 2001 && y < CY);
-  // Este mes (días 1..DD) frente a los mismos días de otros años
+  // This month (days 1..DD) against the same days in other years
   const hist = histYears.map((y) => Z.partial[y] || 0), cur = Z.partial[CY] || 0;
-  box.push({ id: "mes", n: cur, med: median(hist), p: pctRank(hist, cur), hist, lab: PARTIAL ? `Este mes, del 1 al ${DD} de ${MESES_L[CM - 1]}` : `${MESES_L[CM - 1]} de ${CY}` });
-  // Año hasta la fecha
+  box.push({ id: "mes", n: cur, med: median(hist), p: pctRank(hist, cur), hist, lab: PARTIAL ? `This month, 1–${DD} ${MESES_L[CM - 1]}` : `${MESES_L[CM - 1]} ${CY}` });
+  // Year to date
   const ytd = (y) => { let s = 0; for (let m = 1; m < CM; m++) { const i = iOf(y, m); if (i >= 0) s += Z.h[i]; } return s + (Z.partial[y] || 0); };
   const yh = histYears.filter((y) => y >= 2001 && iOf(y, 1) >= 0).map(ytd), yc = ytd(CY);
-  box.push({ id: "anio", n: yc, med: median(yh), p: pctRank(yh, yc), hist: yh, lab: `En lo que va de ${CY}` });
-  // Último mes completo
+  box.push({ id: "anio", n: yc, med: median(yh), p: pctRank(yh, yc), hist: yh, lab: `So far in ${CY}` });
+  // Last complete month
   const iF = PARTIAL ? NK - 2 : NK - 1, mF = mOf(iF), bF = BASE[mF - 1];
-  box.push({ id: "ultimo", n: Z.h[iF], med: bF.med, p: pctRank(bF.vals, Z.h[iF]), hist: bF.vals, mes: `${MESES_L[mF - 1]} de ${yOf(iF)}`, lab: `El mes pasado, ${MESES_L[mF - 1]}` });
+  box.push({ id: "ultimo", n: Z.h[iF], med: bF.med, p: pctRank(bF.vals, Z.h[iF]), hist: bF.vals, mes: `${MESES_L[mF - 1]} ${yOf(iF)}`, lab: `Last month, ${MESES_L[mF - 1]}` });
   const order = BASE.map((b, i) => [b.med, i]).sort((a, b) => b[0] - a[0]);
   const annual = {}; for (let y = 2001; y < CY; y++) { let s = 0; for (let m = 1; m <= 12; m++) { const i = iOf(y, m); if (i >= 0) s += Z.h[i]; } annual[y] = s; }
   const rec = Object.entries(annual).sort((a, b) => b[1] - a[1])[0];
@@ -165,14 +170,14 @@ function computeKPIs() {
   KPI = box;
 }
 function renderKPIs() {
-  const figs = KPI.map((b) => `<div class="fig"><div class="lab">${b.lab}</div><div class="val">${fmt(b.n)} <small>focos</small></div>` +
-    `<div class="lvl ${level(b.p)}">${arrow(b.p)} ${levelWord(b.p)}</div><div class="det">Lo habitual: ${fmt(b.med)}. ${yearsTxt(b.hist, b.n)[0].toUpperCase() + yearsTxt(b.hist, b.n).slice(1)}.</div></div>`);
-  figs.push(`<div class="fig"><div class="lab">Cuándo se quema más aquí</div><div class="val" style="font-size:28px">${MESES_L[REC.order[0]]} y ${MESES_L[REC.order[1]]}</div>` +
-    `<div class="det">El año con más fuego fue ${REC.rec ? REC.rec[0] : "–"}, con ${REC.rec ? fmt(REC.rec[1]) : "–"} focos.</div></div>`);
+  const figs = KPI.map((b) => `<div class="fig"><div class="lab">${b.lab}</div><div class="val">${fmt(b.n)} <small>hotspots</small></div>` +
+    `<div class="lvl ${level(b.p)}">${arrow(b.p)} ${levelWord(b.p)}</div><div class="det">Usual: ${fmt(b.med)}. ${yearsTxt(b.hist, b.n)[0].toUpperCase() + yearsTxt(b.hist, b.n).slice(1)}.</div></div>`);
+  figs.push(`<div class="fig"><div class="lab">When it burns most here</div><div class="val" style="font-size:28px">${MESES_L[REC.order[0]]} and ${MESES_L[REC.order[1]]}</div>` +
+    `<div class="det">The year with the most fire was ${REC.rec ? REC.rec[0] : "–"}, with ${REC.rec ? fmt(REC.rec[1]) : "–"} hotspots.</div></div>`);
   $("kpis").innerHTML = figs.join("");
 }
 
-// ---------- calendario ----------
+// ---------- calendar ----------
 const years = () => { const out = []; for (let y = S.yB; y >= S.yA; y--) out.push(y); return out; };
 function cellValue(i) { return S.mode === "raw" ? Z.naive[i] : Z.h[i]; }
 function renderCalendar() {
@@ -184,7 +189,7 @@ function renderCalendar() {
   const svg = svgEl("svg", { width, height: top + ys.length * ch + 4, xmlns: "http://www.w3.org/2000/svg", "font-family": "Archivo, system-ui, sans-serif" }, host);
   svgEl("rect", { x: 0, y: 0, width, height: top + ys.length * ch + 4, fill: "#15253B" }, svg);
   MESES.forEach((m, i) => (svgEl("text", { x: lab + i * cw + cw / 2, y: 14, "text-anchor": "middle", fill: COL.muted, "font-size": 12 }, svg).textContent = m));
-  svgEl("text", { x: lab + 12 * cw + 6 + totW / 2, y: 14, "text-anchor": "middle", fill: COL.muted, "font-size": 12 }, svg).textContent = "año";
+  svgEl("text", { x: lab + 12 * cw + 6 + totW / 2, y: 14, "text-anchor": "middle", fill: COL.muted, "font-size": 12 }, svg).textContent = "year";
   const inView = []; ys.forEach((y) => { for (let m = 1; m <= 12; m++) { const i = iOf(y, m); if (validMonth(i)) inView.push(cellValue(i)); } });
   const vmax = Math.max(1, quantile(inView, 0.98));
   const annual = ys.map((y) => { let s = 0, n = 0; for (let m = 1; m <= 12; m++) { const i = iOf(y, m); if (validMonth(i)) { s += cellValue(i); n++; } } return { y, s, n }; });
@@ -211,10 +216,10 @@ function renderCalendar() {
       if (showNums && cw > 38) svgEl("text", { x: x + cw / 2, y: yy + ch * 0.68, "text-anchor": "middle", fill: dark ? "#1A1206" : COL.ink, "font-size": 11, "font-variant-numeric": "tabular-nums" }, svg).textContent = txt;
       const histM = S.mode === "raw" ? b.naiveVals : b.vals, pr = pctRank(histM, v), src = monthSource(i);
       rect.addEventListener("mousemove", (ev) => showTip(ev,
-        `<b>${MESES_L[m - 1]} de ${y}</b>${isPartial ? " (mes en curso)" : ""}<br><b>${fmt(v)}</b> focos de calor${S.mode === "raw" ? " sin corregir" : ""}` +
-        (S.mode !== "raw" && src !== "SNPP" && Z.lo !== Z.h ? ` (entre ${fmt(Z.lo[i])} y ${fmt(Z.hi[i])})` : "") +
-        `<br>Lo habitual en ${MESES_L[m - 1]}: ${fmt(med)}<br>${arrow(pr)} ${levelWord(pr)}: ${yearsTxt(histM, v)}` +
-        `<br><span style="opacity:.7">Satélite: ${src === "MODIS" || src === "Terra" ? "MODIS, corregido" : "VIIRS " + src}. Pulsa para verlo en el mapa.</span>`));
+        `<b>${MESES_L[m - 1]} ${y}</b>${isPartial ? " (current month)" : ""}<br><b>${fmt(v)}</b> hotspots${S.mode === "raw" ? " uncorrected" : ""}` +
+        (S.mode !== "raw" && src !== "SNPP" && Z.lo !== Z.h ? ` (between ${fmt(Z.lo[i])} and ${fmt(Z.hi[i])})` : "") +
+        `<br>Usual in ${MESES_L[m - 1]}: ${fmt(med)}<br>${arrow(pr)} ${levelWord(pr)}: ${yearsTxt(histM, v)}` +
+        `<br><span style="opacity:.7">Satellite: ${src === "MODIS" || src === "Terra" ? "MODIS, corrected" : "VIIRS " + src}. Click to see it on the map.</span>`));
       rect.addEventListener("mouseleave", hideTip);
       rect.addEventListener("click", () => focusMonth(y, m));
     }
@@ -229,17 +234,17 @@ function renderCalendar() {
     const yy = top + (S.yB - 2012) * ch;
     svgEl("rect", { x: lab - 3, y: yy, width: 12 * cw + 6, height: ch, fill: "none", stroke: "#FFB04A", "stroke-width": 2, rx: 4 }, svg);
   }
-  const T = { count: "¿Cuántos focos hubo cada mes?", anom: "¿Fue cada mes más o menos de lo habitual?", raw: "Sin corregir: mezclando los satélites tal cual" };
-  const H = { count: `Cada fila es un año y cada casilla un mes de ${zoneLabel()}. Cuanto más brillante, más fuego. Pasa por una casilla para ver el detalle o púlsala para verla en el mapa.`,
-    anom: "Rojo: ese mes hubo más fuego de lo habitual para esa época del año. Azul: menos. El número dice cuánto.",
-    raw: "Fíjate en 2012: parece que de golpe hay mucho más fuego, pero solo empezó a funcionar un satélite que ve más. Por eso corregimos los datos." };
-  $("calTitle").textContent = T[S.mode]; $("calHow").textContent = H[S.mode] + (zoneIsCustom() ? ` Calculado con las ${Z.ncells} celdas de ~50 km de la zona.` : "");
+  const T = { count: "How many hotspots were there each month?", anom: "Was each month above or below usual?", raw: "Uncorrected: mixing the satellites as they are" };
+  const H = { count: `Each row is a year and each cell a month in ${zoneLabel()}. The brighter, the more fire. Hover over a cell for details or click it to see it on the map.`,
+    anom: "Red: that month had more fire than usual for that time of year. Blue: less. The number says how much.",
+    raw: "Look at 2012: it seems that suddenly there is much more fire, but a satellite that sees more simply started working. That is why we correct the data." };
+  $("calTitle").textContent = T[S.mode]; $("calHow").textContent = H[S.mode] + (zoneIsCustom() ? ` Calculated from the ${Z.ncells} cells of ~50 km in the area.` : "");
   $("calLegend").innerHTML = S.mode === "anom"
-    ? `<span>Menos de lo habitual</span><div class="ramp" style="background:linear-gradient(90deg,${DIVERG.join(",")})"></div><span>Más</span>`
-    : `<span>Poco fuego</span><div class="ramp" style="background:linear-gradient(90deg,${THERMAL.slice(1).join(",")})"></div><span>Mucho</span>`;
+    ? `<span>Less than usual</span><div class="ramp" style="background:linear-gradient(90deg,${DIVERG.join(",")})"></div><span>More</span>`
+    : `<span>Little fire</span><div class="ramp" style="background:linear-gradient(90deg,${THERMAL.slice(1).join(",")})"></div><span>A lot</span>`;
 }
 
-// ---------- gráficos ----------
+// ---------- charts ----------
 function axes(svg, w, h, pad, xs, ys, xTicks, yMax) {
   for (let i = 0; i <= 4; i++) {
     const v = yMax * i / 4, y = ys(v);
@@ -271,10 +276,10 @@ function renderClim() {
     const c = svgEl("circle", { cx: xs(i + 1), cy: ys(v), r: 4.5, fill: COL.corr, stroke: "#15253B", "stroke-width": 2 }, svg);
     const b = BASE[i];
     const hit = svgEl("rect", { x: xs(i + 1) - 14, y: pad.t, width: 28, height: h - pad.t - pad.b, fill: "transparent" }, svg);
-    hit.addEventListener("mousemove", (ev) => showTip(ev, `<b>${MESES_L[i]}</b><br>${CY}: ${fmt(v)} focos${i === CM - 1 && PARTIAL ? " (mes a medias)" : ""}<br>Año normal: ${fmt(b.med)}<br>8 de cada 10 años: entre ${fmt(b.p10)} y ${fmt(b.p90)}`));
+    hit.addEventListener("mousemove", (ev) => showTip(ev, `<b>${MESES_L[i]}</b><br>${CY}: ${fmt(v)} hotspots${i === CM - 1 && PARTIAL ? " (month in progress)" : ""}<br>Normal year: ${fmt(b.med)}<br>8 out of 10 years: between ${fmt(b.p10)} and ${fmt(b.p90)}`));
     hit.addEventListener("mouseleave", hideTip);
   });
-  legend(svg, [[COL.corr, String(CY)], [COL.normal, "un año normal"]], w - 150, 22);
+  legend(svg, [[COL.corr, String(CY)], [COL.normal, "a normal year"]], w - 150, 22);
 }
 function renderAnnual() {
   const svg = $("annual"); svg.innerHTML = "";
@@ -300,10 +305,10 @@ function renderAnnual() {
   svgEl("path", { d: path(ser.map((s) => [xs(s.y), ys(s.H)])), fill: "none", stroke: COL.corr, "stroke-width": 2.5 }, svg);
   ser.forEach((s) => {
     const hit = svgEl("rect", { x: xs(s.y) - 10, y: pad.t, width: 20, height: h - pad.t - pad.b, fill: "transparent" }, svg);
-    hit.addEventListener("mousemove", (ev) => showTip(ev, `<b>${s.y}</b><br>Corregido: ${fmt(s.H)} focos${s.hi > s.lo ? ` (entre ${fmt(s.lo)} y ${fmt(s.hi)})` : ""}` + (Z.raw ? `<br>Sin corregir: ${fmt(s.nv)}<br>Solo MODIS: ${fmt(s.mo)} · solo VIIRS: ${fmt(s.vi)}` : "")));
+    hit.addEventListener("mousemove", (ev) => showTip(ev, `<b>${s.y}</b><br>Corrected: ${fmt(s.H)} hotspots${s.hi > s.lo ? ` (between ${fmt(s.lo)} and ${fmt(s.hi)})` : ""}` + (Z.raw ? `<br>Uncorrected: ${fmt(s.nv)}<br>MODIS only: ${fmt(s.mo)} · VIIRS only: ${fmt(s.vi)}` : "")));
     hit.addEventListener("mouseleave", hideTip);
   });
-  legend(svg, Z.raw ? [[COL.corr, "corregido"], [COL.raw, "sin corregir", "6,4"], [COL.modis, "solo MODIS"], [COL.viirs, "solo VIIRS"]] : [[COL.corr, "corregido"]], pad.l + 10, 22);
+  legend(svg, Z.raw ? [[COL.corr, "corrected"], [COL.raw, "uncorrected", "6,4"], [COL.modis, "MODIS only"], [COL.viirs, "VIIRS only"]] : [[COL.corr, "corrected"]], pad.l + 10, 22);
 }
 function renderValidation() {
   const v = D.val.resumen, o = D.fac.overlap, eu = D.val.europa;
@@ -311,14 +316,14 @@ function renderValidation() {
   const rows = (iso ? D.val.paises[iso] || [] : eu).map((r) => `<tr><td>${r.year}</td><td>${fmt(r.observado)}</td><td>${fmt(iso ? r.pred_pais : r.pred_europeo)}</td><td>${fmt(r.modis)}</td></tr>`).join("");
   const f = iso ? D.fac.r[iso] : D.fac.eu;
   $("validation").innerHTML =
-    `<p>Prueba: entre ${o[0]} y ${o[1]} funcionan los dos satélites. Escondemos un año, usamos solo MODIS para estimar lo que vio VIIRS y lo comparamos con la realidad.</p>` +
-    `<p>En los países, sin corregir nos equivocamos un <b>${fmt(v.paises.sin_corregir)} %</b>; con un factor común para Europa, un <b>${fmt1(v.paises.factor_europeo)} %</b>; con un factor propio de cada país, solo un <b>${fmt1(v.paises.factor_por_pais)} %</b> (error mediano del total anual).</p>` +
-    `<p class="note">${iso ? `${COUNTRY_NAME[iso]}: VIIRS ve ${fmt1(f.est)} focos por cada uno de MODIS (entre ${fmt1(f.lo)} y ${fmt1(f.hi)})${f.fuente === "europeo" ? ", factor europeo por falta de datos propios" : ""}.` : `Europa: VIIRS ve ${fmt1(f.est)} focos por cada uno de MODIS (entre ${fmt1(f.lo)} y ${fmt1(f.hi)}).`}</p>` +
-    `<div class="table-wrap" style="max-height:260px"><table class="t"><caption class="sr">Validación por años</caption><tr><th scope="col">Año</th><th scope="col">Visto por VIIRS</th><th scope="col">Estimado con MODIS</th><th scope="col">MODIS sin corregir</th></tr>${rows}</table></div>`;
+    `<p>Test: between ${o[0]} and ${o[1]} both satellites work. We hide one year, use only MODIS to estimate what VIIRS saw and compare it with reality.</p>` +
+    `<p>Across countries, uncorrected we are off by <b>${fmt(v.paises.sin_corregir)}%</b>; with one common factor for Europe, <b>${fmt1(v.paises.factor_europeo)}%</b>; with each country's own factor, only <b>${fmt1(v.paises.factor_por_pais)}%</b> (median error of the annual total).</p>` +
+    `<p class="note">${iso ? `${COUNTRY_NAME[iso]}: VIIRS sees ${fmt1(f.est)} hotspots for each one from MODIS (between ${fmt1(f.lo)} and ${fmt1(f.hi)})${f.fuente === "europeo" ? ", European factor because of a lack of its own data" : ""}.` : `Europe: VIIRS sees ${fmt1(f.est)} hotspots for each one from MODIS (between ${fmt1(f.lo)} and ${fmt1(f.hi)}).`}</p>` +
+    `<div class="table-wrap" style="max-height:260px"><table class="t"><caption class="sr">Validation by year</caption><tr><th scope="col">Year</th><th scope="col">Seen by VIIRS</th><th scope="col">Estimated from MODIS</th><th scope="col">MODIS uncorrected</th></tr>${rows}</table></div>`;
 }
 function spearman(a, b) { const rk = (v) => { const o = v.map((x, i) => [x, i]).sort((p, q) => p[0] - q[0]), r = new Array(v.length); o.forEach(([, i], j) => (r[i] = j + 1)); return r; }; return pearson(rk(a), rk(b)); }
 function pearson(a, b) { const n = a.length, ma = a.reduce((s, x) => s + x, 0) / n, mb = b.reduce((s, x) => s + x, 0) / n; let c = 0, va = 0, vb = 0; for (let i = 0; i < n; i++) { c += (a[i] - ma) * (b[i] - mb); va += (a[i] - ma) ** 2; vb += (b[i] - mb) ** 2; } return c / Math.sqrt(va * vb); }
-const REP_LABEL = { hectareas_gwis: "área quemada (GWIS, Copernicus)", hectareas_oficiales: "área quemada oficial", incendios: "número de incendios oficial" };
+const REP_LABEL = { hectareas_gwis: "burned area (GWIS, Copernicus)", hectareas_oficiales: "official burned area", incendios: "official number of fires" };
 function renderReported() {
   const card = $("reportedCard");
   if (!D.reportado || zoneIsCustom()) { card.hidden = true; return; }
@@ -343,30 +348,30 @@ function renderReported() {
   svgEl("path", { d: path(ys.map((y, i) => [xs(y), yv(ri[i])])), fill: "none", stroke: COL.modis, "stroke-width": 2.5, "stroke-dasharray": "6,4" }, svg);
   ys.forEach((y, i) => {
     const hit = svgEl("rect", { x: xs(y) - 10, y: pad.t, width: 20, height: h - pad.t - pad.b, fill: "transparent" }, svg);
-    hit.addEventListener("mousemove", (ev) => showTip(ev, `<b>${y}</b><br>Focos de calor: ${fmt(det[i])}<br>${REP_LABEL[metric]}: ${fmt(rep[i])}`));
+    hit.addEventListener("mousemove", (ev) => showTip(ev, `<b>${y}</b><br>Hotspots: ${fmt(det[i])}<br>${REP_LABEL[metric]}: ${fmt(rep[i])}`));
     hit.addEventListener("mouseleave", hideTip);
   });
-  legend(svg, [[COL.corr, "focos de calor (corregidos)"], [COL.modis, REP_LABEL[metric], "6,4"]], pad.l + 10, 22);
-  const sp = spearman(det, rep), word = sp >= 0.7 ? "muy parecidas" : sp >= 0.5 ? "bastante parecidas" : sp >= 0.3 ? "algo parecidas" : "poco parecidas";
-  $("reportedNote").innerHTML = `${zoneLabel()}, ${ys[0]}–${ys[ys.length - 1]}: las dos series son <b>${word}</b> (coeficiente de Spearman ${nf1.format(Math.round(sp * 100) / 100)}; 1 significa que suben y bajan exactamente a la vez). ` +
-    `No tienen por qué coincidir del todo: un incendio grande quema mucho con relativamente pocos focos, y muchas quemas agrícolas pequeñas dan muchos focos y poca superficie.`;
+  legend(svg, [[COL.corr, "hotspots (corrected)"], [COL.modis, REP_LABEL[metric], "6,4"]], pad.l + 10, 22);
+  const sp = spearman(det, rep), word = sp >= 0.7 ? "very similar" : sp >= 0.5 ? "fairly similar" : sp >= 0.3 ? "somewhat similar" : "weakly similar";
+  $("reportedNote").innerHTML = `${zoneLabel()}, ${ys[0]}–${ys[ys.length - 1]}: the two series are <b>${word}</b> (Spearman coefficient ${nf1.format(Math.round(sp * 100) / 100)}; 1 means they rise and fall exactly together). ` +
+    `They need not match completely: a large fire burns a lot with relatively few hotspots, while many small agricultural fires give many hotspots and little area.`;
 }
 
-// ---------- descargas ----------
-const slug = () => (zoneIsCustom() ? "zona" : S.zone === "EU" ? "europa" : COUNTRY_NAME[S.zone]).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, "_");
+// ---------- downloads ----------
+const slug = () => (zoneIsCustom() ? "area" : S.zone === "EU" ? "europe" : COUNTRY_NAME[S.zone]).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, "_");
 function csvCalendar() {
-  const out = ["anio,mes,focos_corregidos,minimo_90,maximo_90,habitual_mes,diferencia_pct,sin_corregir,modis,viirs_snpp,satelite_del_mes,mes_incompleto"];
+  const out = ["year,month,corrected_hotspots,min_90,max_90,usual_for_month,difference_pct,uncorrected,modis,viirs_snpp,month_satellite,incomplete_month"];
   for (let i = 0; i < NK; i++) {
     const y = yOf(i), m = mOf(i); if (y < S.yA || y > S.yB || !validMonth(i)) continue;
     const b = BASE[m - 1], v = Z.h[i];
     out.push([y, m, v.toFixed(1), Z.lo[i].toFixed(1), Z.hi[i].toFixed(1), (b.med || 0).toFixed(1), b.med > 0 ? (100 * (v - b.med) / b.med).toFixed(0) : "",
       Z.raw ? Z.naive[i] : "", Z.raw ? Z.modis[i] : "", Z.raw ? Z.viirs[i] : "", monthSource(i), i === NK - 1 && PARTIAL ? 1 : 0].join(","));
   }
-  download(`calendario_${slug()}.csv`, out.join("\n"));
+  download(`calendar_${slug()}.csv`, out.join("\n"));
 }
 async function csvPoints() {
   const months = D.meta.recientes.filter((n) => +n.slice(0, 4) >= S.yA && +n.slice(0, 4) <= S.yB);
-  const out = ["fecha,latitud,longitud,pais,satelite,instrumento,frp_mw,peso_correccion"];
+  const out = ["date,latitude,longitude,country,satellite,instrument,frp_mw,correction_weight"];
   for (const n of months) {
     const p = await loadMonth(n);
     for (let t = 0; t < p.x.length; t++) {
@@ -376,12 +381,12 @@ async function csvPoints() {
       out.push([new Date(DAY0 + p.d[t] * 864e5).toISOString().slice(0, 10), lat.toFixed(3), lon.toFixed(3), p.p[t], SATS[p.s[t]], INSTR[p.s[t]], (p.f[t] / 10).toFixed(1), p.w[t]].join(","));
     }
   }
-  download(`focos_${slug()}.csv`, out.join("\n"));
+  download(`hotspots_${slug()}.csv`, out.join("\n"));
 }
 const MONTH_CACHE = {};
 function loadMonth(name) { if (!MONTH_CACHE[name]) MONTH_CACHE[name] = fetch(`data/focos/${name}.json`).then((r) => r.json()); return MONTH_CACHE[name]; }
 
-// ---------- actualización ----------
+// ---------- update ----------
 function update(fit = false) {
   computeZone(); computeKPIs();
   renderKPIs(); renderCalendar(); renderClim(); renderAnnual(); renderValidation(); renderReported();
@@ -391,7 +396,7 @@ function update(fit = false) {
 }
 async function main() {
   try { await load(); }
-  catch (e) { $("kicker").textContent = "No se pudieron cargar los datos (" + e.message + "). Abre la web con un servidor (python -m http.server) y comprueba que existe la carpeta web/data."; return; }
+  catch (e) { $("mapnote").textContent = "The data could not be loaded (" + e.message + "). Open the site through a server (python -m http.server) and check that the web/data folder exists."; return; }
   if (D.meta.sinteticos) $("synthetic").hidden = false;
   $("ovl").textContent = `${D.fac.overlap[0]}–${D.fac.overlap[1]}`;
   $("nstatic").textContent = fmt(D.fijas.features.length);

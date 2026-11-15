@@ -1,15 +1,15 @@
-/* Mapa: Europa de noche con una capa de «brillo» dibujada en canvas (los fuegos se suman como luz). */
+/* Map: Europe at night with a "glow" layer drawn on canvas (fires add up like light). */
 "use strict";
 
-// Clave de CARTO (opcional). Vacía = se usa el mapa base de Esri, que no necesita clave.
-// Ojo: en una web pública la clave queda a la vista; restríngela a tu dominio en el panel de CARTO.
+// CARTO key (optional). Empty = the Esri base map is used, which needs no key.
+// Note: on a public site the key is visible; restrict it to your domain in the CARTO dashboard.
 
 const CARTO_KEY = "cb1_595e_1_4eef2846f891644f3090a53b";
 
 let map, base, labels, gibs, glow, countryLayer, zoneLayer, drawn, drawTool = null;
 const EU_BOUNDS = [[35, -10], [70, 40]];
 
-// Capa propia: dibuja manchas de luz con mezcla aditiva («lighter»), como se vería desde el espacio
+// Custom layer: draws light blobs with additive blending ("lighter"), as seen from space
 const GlowLayer = L.Layer.extend({
   initialize() { this.items = []; },
   onAdd(m) {
@@ -45,17 +45,17 @@ function initMap() {
   tameMapScroll();
   map.createPane("labels"); map.getPane("labels").style.zIndex = 450; map.getPane("labels").style.pointerEvents = "none";
   if (CARTO_KEY) {
-    // CARTO exige clave desde 2026 (gratis en carto.com/basemaps/apikey)
+    // CARTO requires a key since 2026 (free at carto.com/basemaps/apikey)
     base = L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, { attribution: "© OpenStreetMap © CARTO", maxZoom: 19 }).addTo(map);
     labels = L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/dark_only_labels/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`, { pane: "labels", opacity: 0.55 }).addTo(map);
   } else {
-    // Sin clave: lienzo gris oscuro de Esri (gratuito, mismo esquema de fondo + etiquetas)
+    // No key: Esri dark gray canvas (free, same base + labels scheme)
     const esri = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
-    base = L.tileLayer(esri + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Mapa base © Esri, © OpenStreetMap", maxNativeZoom: 16, maxZoom: 19 }).addTo(map);
+    base = L.tileLayer(esri + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", { attribution: "Base map © Esri, © OpenStreetMap", maxNativeZoom: 16, maxZoom: 19 }).addTo(map);
     labels = L.tileLayer(esri + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", { pane: "labels", maxNativeZoom: 16, maxZoom: 19, opacity: 0.7 }).addTo(map);
   }
   gibs = L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.jpg",
-    { layer: "VIIRS_NOAA20_CorrectedReflectance_TrueColor", time: D.meta.ultimo_dato, tileMatrixSet: "GoogleMapsCompatible_Level9", maxNativeZoom: 9, maxZoom: 12, attribution: "Imagen: NASA GIBS" });
+    { layer: "VIIRS_NOAA20_CorrectedReflectance_TrueColor", time: D.meta.ultimo_dato, tileMatrixSet: "GoogleMapsCompatible_Level9", maxNativeZoom: 9, maxZoom: 12, attribution: "Imagery: NASA GIBS" });
   countryLayer = L.geoJSON(D.paises, {
     style: () => ({ color: "#2A3F5C", weight: 0.8, fillOpacity: 0, fillColor: "#000" }),
     onEachFeature: (f, l) => {
@@ -76,7 +76,7 @@ function initMap() {
 }
 function countryTip(iso) {
   const c = COUNTRY_STATS && COUNTRY_STATS[iso]; if (!c) return COUNTRY_NAME[iso];
-  return `<b>${COUNTRY_NAME[iso]}</b><br>${CY} hasta hoy: ${fmt(c.ytd)} focos<br><span class="arrow ${level(c.ytdP)}">${arrow(c.ytdP)}</span> ${levelWord(c.ytdP)} (lo habitual: ${fmt(c.ytdMed)})`;
+  return `<b>${COUNTRY_NAME[iso]}</b><br>${CY} so far: ${fmt(c.ytd)} hotspots<br><span class="arrow ${level(c.ytdP)}">${arrow(c.ytdP)}</span> ${levelWord(c.ytdP)} (usual: ${fmt(c.ytdMed)})`;
 }
 function styleCountries() {
   countryLayer.eachLayer((l) => {
@@ -88,7 +88,7 @@ function styleCountries() {
   });
 }
 
-// ---------- capas según la vista ----------
+// ---------- layers by view ----------
 function heatItems(iA, iB, cellFilter) {
   const R = D.rejilla, g = R.deg, sum = new Float64Array(R.celdas.length);
   for (let t = 0; t < R.c.length; t++) { const k = R.k[t]; if (k >= iA && k <= iB) sum[R.c[t]] += R.v[t] / 10; }
@@ -109,41 +109,41 @@ async function renderMapLayer(fit) {
   if (fit) fitZone();
   const note = $("mapnote"), lg = $("mapLegend");
   const thermalLegend = (a, b) => `<span>${a}</span><div class="ramp" style="background:linear-gradient(90deg,${THERMAL.slice(2).join(",")})"></div><span>${b}</span>`;
-  if (S.event) return;   // un incendio concreto se dibuja en focusEvent
+  if (S.event) return;   // a specific fire is drawn in focusEvent
   if (S.mapView === "paises") {
     glow.set([]);
-    lg.innerHTML = `<span>Menos que lo habitual</span><div class="ramp" style="background:linear-gradient(90deg,${DIVERG.join(",")})"></div><span>Más</span>`;
-    note.textContent = `Cada país coloreado según sus focos de calor en ${CY} hasta el ${DD} de ${MESES_L[CM - 1]}, comparado con un año normal en las mismas fechas. Pulsa un país para verlo.`;
+    lg.innerHTML = `<span>Less than usual</span><div class="ramp" style="background:linear-gradient(90deg,${DIVERG.join(",")})"></div><span>More</span>`;
+    note.textContent = `Each country is colored by its heat spots in ${CY} up to ${DD} ${MESES_L[CM - 1]}, compared with a normal year over the same dates. Click a country to see it.`;
     return;
   }
   if (S.mapView === "focos") {
     const rec = D.meta.recientes, i = S.mapMonth != null ? S.mapMonth : NK - 1, name = `${yOf(i)}-${String(mOf(i)).padStart(2, "0")}`;
     if (rec.includes(name)) {
       const p = await loadMonth(name), items = [];
-      // Con muchos focos la luz se suma y se satura: cada punto brilla menos cuantos más hay
+      // With many hotspots the light adds up and saturates: each point shines less the more there are
       const n = p.x.length, a0 = Math.max(0.12, Math.min(0.85, 2500 / Math.max(1, n))), rs = innerWidth < 560 ? 0.7 : 1;
       for (let t = 0; t < n; t++) {
         const tf = Math.min(1, Math.log1p(p.f[t] / 10) / Math.log1p(300));
         items.push({ lat: p.y[t] / 1000, lon: p.x[t] / 1000, r: rs * (3 + 5 * tf), rgb: rgbOf(ramp(THERMAL, 0.45 + 0.55 * tf)), a: Math.max(0.35, a0) * (0.6 + 0.4 * tf) });
       }
-      items.sort((x, y) => x.r - y.r);   // los más intensos encima
+      items.sort((x, y) => x.r - y.r);   // the most intense on top
       glow.set(items, "source-over");
-      lg.innerHTML = thermalLegend("fuego débil", "intenso");
-      note.innerHTML = `${fmt(p.x.length)} focos de calor en ${MESES_L[mOf(i) - 1]} de ${yOf(i)}. Para ver otro mes, púlsalo en el Calendario.`;
+      lg.innerHTML = thermalLegend("weak fire", "intense");
+      note.innerHTML = `${fmt(p.x.length)} hotspots in ${MESES_L[mOf(i) - 1]} ${yOf(i)}. To see another month, click it in the Calendar.`;
       return;
     }
     const h = heatItems(i, i); glow.set(h.items);
-    lg.innerHTML = thermalLegend("poco", "mucho fuego");
-    note.innerHTML = `${MESES_L[mOf(i) - 1]} de ${yOf(i)} en celdas de ~50 km (los focos uno a uno solo están para los últimos ${rec.length} meses). <a href="#" id="mapAll">Ver todos los años</a>`;
+    lg.innerHTML = thermalLegend("little", "a lot of fire");
+    note.innerHTML = `${MESES_L[mOf(i) - 1]} ${yOf(i)} in ~50 km cells (individual hotspots are only available for the last ${rec.length} months). <a href="#" id="mapAll">See all years</a>`;
     $("mapAll").onclick = (e) => { e.preventDefault(); S.mapMonth = null; setMapView("calor"); };
     return;
   }
   const iA = Math.max(0, iOf(S.yA, 1)), iB = Math.min(NK - 1, iOf(S.yB, 12));
   const h = heatItems(S.mapMonth != null ? S.mapMonth : iA, S.mapMonth != null ? S.mapMonth : iB);
   glow.set(h.items);
-  lg.innerHTML = thermalLegend("poco", "mucho fuego");
-  note.textContent = S.mapMonth != null ? `${MESES_L[mOf(S.mapMonth) - 1]} de ${yOf(S.mapMonth)}.` :
-    `Focos de calor por año entre ${S.yA} y ${S.yB}, en celdas de unos 50 km. Pulsa un país para verlo o elige «Dibujarla en el mapa» en Zona.`;
+  lg.innerHTML = thermalLegend("little", "a lot of fire");
+  note.textContent = S.mapMonth != null ? `${MESES_L[mOf(S.mapMonth) - 1]} ${yOf(S.mapMonth)}.` :
+    `Heat spots per year between ${S.yA} and ${S.yB}, in cells of about 50 km. Click a country to see it or choose “Draw it on the map” under Area.`;
 }
 function setMapView(v) { S.mapView = v; document.querySelector(`input[name=mapView][value=${v}]`).checked = true; return renderMapLayer(false); }
 function fitZone() {
@@ -158,8 +158,8 @@ function scrollToMap() {
   const bar = innerWidth > 1000 ? document.querySelector(".bar").offsetHeight : 0;
   scrollTo({ top: document.querySelector(".map-card").getBoundingClientRect().top + scrollY - bar - 10, behavior });
 }
-// La rueda del ratón desplaza la página; el mapa solo hace zoom con la rueda tras pulsarlo.
-// En pantallas táctiles, el dedo desplaza la página hasta que se toca el mapa una vez.
+// The mouse wheel scrolls the page; the map only zooms with the wheel after being clicked.
+// On touch screens, the finger scrolls the page until the map is tapped once.
 function tameMapScroll() {
   map.scrollWheelZoom.disable();
   const card = document.querySelector(".map-card");
@@ -169,12 +169,12 @@ function tameMapScroll() {
     map.dragging.disable(); if (map.tap) map.tap.disable();
     const hint = $("touchHint"); hint.hidden = false;
     map.on("click", () => { map.dragging.enable(); hint.hidden = true; });
-    // Al salir el mapa de la pantalla vuelve a dejar pasar el scroll
+    // When the map leaves the screen it lets scrolling through again
     new IntersectionObserver(([e]) => { if (!e.isIntersecting) { map.dragging.disable(); hint.hidden = false; } }, { threshold: 0 }).observe(card);
   }
 }
 
-// Pulsar un mes del calendario: ese mes en el mapa, con la foto de su día con más fuego
+// Clicking a calendar month: that month on the map, with the photo of its day with the most fire
 async function focusMonth(y, m) {
   const i = iOf(y, m), name = `${y}-${String(m).padStart(2, "0")}`;
   S.mapMonth = i; S.event = null;

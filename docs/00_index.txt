@@ -1,4 +1,4 @@
-DOCUMENTATION - FUEGO EN EUROPA
+DOCUMENTATION - PYRORBIT CODE
 NASA Space Apps Challenge 2026 - Challenge "Harmonization of MODIS and VIIRS Hot Spots" (CONAE)
 
 Files in this folder:

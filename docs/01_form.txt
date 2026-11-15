@@ -5,10 +5,10 @@ PROJECT SUMMARY
 ---
 
 --- Project Name ("Project We Love Code"; "We Love Code")
-Fuego en Europa
+PyrOrbit Code
 
 --- Summary * (50-200 words, max. 1500 characters)
-Fuego en Europa is a web app that merges NASA's MODIS and VIIRS fire detections into one comparable record of heat spots for 40 European countries, from 2000 to today. MODIS (1 km) and VIIRS (375 m) see fires at different resolutions, so their counts cannot be compared directly, and the historical series shows a false jump when VIIRS starts in 2012. We downloaded NASA FIRMS data, removed fixed heat sources (industry, flares, solar plants) and converted everything to a common unit, "VIIRS S-NPP equivalent hotspots", using a MODIS-to-VIIRS factor calibrated for each country over the 2012-2020 overlap, with 90% bootstrap intervals. Hiding one year at a time, the correction predicts yearly European VIIRS counts with about 3.4% mean error, versus about 69% for uncorrected MODIS. The site offers a night-time map, a monthly calendar, comparison with usual levels, individually detected fires with NASA GIBS imagery, downloads and a voice assistant. It matters because researchers, agencies and citizens can read 25 years of fire trends without sensor artifacts.
+PyrOrbit Code is a web app that merges NASA's MODIS and VIIRS fire detections into one comparable record of heat spots for 40 European countries, from 2000 to today. MODIS (1 km) and VIIRS (375 m) see fires at different resolutions, so their counts cannot be compared directly, and the historical series shows a false jump when VIIRS starts in 2012. We downloaded NASA FIRMS data, removed fixed heat sources (industry, flares, solar plants) and converted everything to a common unit, "VIIRS S-NPP equivalent hotspots", using a MODIS-to-VIIRS factor calibrated for each country over the 2012-2020 overlap, with 90% bootstrap intervals. Hiding one year at a time, the correction predicts yearly European VIIRS counts with about 3.4% mean error, versus about 69% for uncorrected MODIS. The site offers a night-time map, a monthly calendar, comparison with usual levels, individually detected fires with NASA GIBS imagery, downloads and a voice assistant. It matters because researchers, agencies and citizens can read 25 years of fire trends without sensor artifacts.
 
 ---
 PROJECT LINKS
@@ -28,7 +28,7 @@ PROJECT INFORMATION
 
 --- Project Details *
 WHAT IT DOES
-Fuego en Europa harmonizes the two main families of NASA active-fire detections: MODIS (Terra and Aqua, 1 km) and VIIRS (Suomi NPP, NOAA-20 and NOAA-21, 375 m). Because they detect fires at different sensitivity, a raw time series shows a false jump when VIIRS appears (2012) and when new satellites join. Our pipeline builds a single, continuous series for 40 European countries (EU-27, UK, Norway, Switzerland, Iceland, the Balkans, Ukraine, Moldova and Belarus; Russia excluded) from 2000 to the present.
+PyrOrbit Code harmonizes the two main families of NASA active-fire detections: MODIS (Terra and Aqua, 1 km) and VIIRS (Suomi NPP, NOAA-20 and NOAA-21, 375 m). Because they detect fires at different sensitivity, a raw time series shows a false jump when VIIRS appears (2012) and when new satellites join. Our pipeline builds a single, continuous series for 40 European countries (EU-27, UK, Norway, Switzerland, Iceland, the Balkans, Ukraine, Moldova and Belarus; Russia excluded) from 2000 to the present.
 
 HOW IT WORKS
 1. Download: yearly per-country summaries and the near-real-time API from NASA FIRMS.

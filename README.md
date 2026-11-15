@@ -1,4 +1,4 @@
-# Fuego en Europa
+# PyrOrbit Code
 
 NASA Space Apps Challenge 2026, reto *Harmonization of MODIS and VIIRS Hot Spots* (propuesto por CONAE).
 

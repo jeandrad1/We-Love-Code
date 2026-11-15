@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fuego en Europa · focos de calor vistos desde el espacio</title>
-<meta name="description" content="Calendario de fuego en Europa desde 2000 con los satélites MODIS y VIIRS de la NASA, corregidos para poder comparar todos los años.">
+<title>PyrOrbit Code · heat spots seen from space</title>
+<meta name="description" content="Fire calendar for Europe since 2000 with NASA's MODIS and VIIRS satellites, harmonized so every year can be compared.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&display=swap" rel="stylesheet">
@@ -13,99 +13,99 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<a class="skip" href="#contenido">Saltar al contenido</a>
+<a class="skip" href="#contenido">Skip to content</a>
 
 <header class="bar">
-  <a class="brand" href="./" aria-label="Fuego en Europa, inicio">
+  <a class="brand" href="./" aria-label="PyrOrbit Code, home">
     <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 3"/><circle cx="16" cy="16" r="6" fill="url(#g)"/><defs><radialGradient id="g"><stop offset="0" stop-color="#FFF6CF"/><stop offset=".5" stop-color="#F08A34"/><stop offset="1" stop-color="#9C2F68"/></radialGradient></defs></svg>
-    <span>Fuego en Europa</span>
+    <span>PyrOrbit Code</span>
   </a>
-  <div class="controls" role="group" aria-label="Zona y años">
+  <div class="controls" role="group" aria-label="Area and years">
     <label class="ctl">
-      <span>Zona</span>
+      <span>Area</span>
       <select id="zone"></select>
     </label>
     <div class="ctl circle-row" id="circleRow" hidden>
-      <label>Latitud <input id="lat" type="number" step="0.1" value="40.4" inputmode="decimal"></label>
-      <label>Longitud <input id="lon" type="number" step="0.1" value="-3.7" inputmode="decimal"></label>
-      <label>Radio (km) <input id="rad" type="number" step="10" value="150" inputmode="numeric"></label>
-      <button id="applyCircle" type="button" class="primary">Ver zona</button>
+      <label>Latitude <input id="lat" type="number" step="0.1" value="40.4" inputmode="decimal"></label>
+      <label>Longitude <input id="lon" type="number" step="0.1" value="-3.7" inputmode="decimal"></label>
+      <label>Radius (km) <input id="rad" type="number" step="10" value="150" inputmode="numeric"></label>
+      <button id="applyCircle" type="button" class="primary">Show area</button>
     </div>
   </div>
   <span id="dataDate" class="status"></span>
-  <button id="helpBtn" class="quiet" type="button">Cómo se usa</button>
+  <button id="helpBtn" class="quiet" type="button">How to use</button>
 </header>
 <p id="zoneHint" class="hint" role="status" hidden></p>
-<div id="synthetic" class="banner" hidden>Estás viendo datos de prueba inventados, no detecciones reales.</div>
+<div id="synthetic" class="banner" hidden>You are viewing made-up test data, not real detections.</div>
 
 <main id="contenido">
-  <!-- Mapa: Europa de noche con sus fuegos -->
-  <section class="map-section" aria-label="Mapa de focos de calor">
+  <!-- Map: Europe at night with its fires -->
+  <section class="map-section" aria-label="Heat spot map">
     <div class="map-card">
-      <div id="map" aria-label="Mapa de focos de calor en Europa"></div>
+      <div id="map" aria-label="Map of heat spots in Europe"></div>
       <div class="map-top">
-        <fieldset class="seg" aria-label="Qué muestra el mapa">
-          <label><input type="radio" name="mapView" value="calor" checked><span>Dónde se quema</span></label>
-          <label><input type="radio" name="mapView" value="paises"><span>Frente a lo habitual</span></label>
-          <label><input type="radio" name="mapView" value="focos"><span>Focos de un mes</span></label>
+        <fieldset class="seg" aria-label="What the map shows">
+          <label><input type="radio" name="mapView" value="calor" checked><span>Where it burns</span></label>
+          <label><input type="radio" name="mapView" value="paises"><span>Versus usual</span></label>
+          <label><input type="radio" name="mapView" value="focos"><span>One month's hotspots</span></label>
         </fieldset>
       </div>
       <div class="map-bottom">
         <div class="time-strip" role="group" aria-labelledby="tsLabel">
         <div class="ts-head">
-          <span id="tsLabel" class="ts-label">Años</span>
+          <span id="tsLabel" class="ts-label">Years</span>
           <output id="tsRange" class="ts-range" aria-live="polite">2000 – 2026</output>
-          <div class="quick" role="group" aria-label="Atajos de años">
-            <button type="button" data-range="all">Todo</button>
-            <button type="button" data-range="10">10 años</button>
-            <button type="button" data-range="1">Este año</button>
+          <div class="quick" role="group" aria-label="Year shortcuts">
+            <button type="button" data-range="all">All</button>
+            <button type="button" data-range="10">10 years</button>
+            <button type="button" data-range="1">This year</button>
           </div>
         </div>
         <div class="dual">
           <div class="dual-track"><div class="dual-fill" id="dualFill"></div></div>
-          <input type="range" id="yFrom" aria-label="Desde el año" step="1">
-          <input type="range" id="yTo" aria-label="Hasta el año" step="1">
+          <input type="range" id="yFrom" aria-label="From year" step="1">
+          <input type="range" id="yTo" aria-label="To year" step="1">
         </div>
         <div class="ts-ticks" id="tsTicks" aria-hidden="true"></div>
       </div>
-        <div id="mapLegend" class="legend map-legend" aria-label="Leyenda del mapa"></div>
+        <div id="mapLegend" class="legend map-legend" aria-label="Map legend"></div>
       </div>
-      <p id="touchHint" class="touch-hint" hidden>Toca el mapa para moverlo</p>
+      <p id="touchHint" class="touch-hint" hidden>Tap the map to move it</p>
     </div>
     <div class="map-foot">
-      <p id="mapnote" class="mapnote" aria-live="polite">Cargando datos de los satélites…</p>
+      <p id="mapnote" class="mapnote" aria-live="polite">Loading satellite data…</p>
       <details class="sat">
-        <summary>Foto del satélite de un día</summary>
+        <summary>Satellite photo of one day</summary>
         <div class="row">
-          <label class="check"><input type="checkbox" id="gibsOn"> Mostrar la foto</label>
-          <input id="gibsDate" type="date" aria-label="Día de la foto">
-          <select id="gibsBands" aria-label="Tipo de foto">
-            <option value="true">Color real: se ve el humo</option>
-            <option value="false">Falso color: se ve lo quemado</option>
+          <label class="check"><input type="checkbox" id="gibsOn"> Show the photo</label>
+          <input id="gibsDate" type="date" aria-label="Photo date">
+          <select id="gibsBands" aria-label="Photo type">
+            <option value="true">True color: smoke is visible</option>
+            <option value="false">False color: burned land is visible</option>
           </select>
         </div>
       </details>
     </div>
   </section>
 
-  <nav class="tabs" role="tablist" aria-label="Secciones">
-    <button role="tab" id="tab-resumen" aria-controls="p-resumen" aria-selected="true">Resumen</button>
-    <button role="tab" id="tab-calendario" aria-controls="p-calendario" aria-selected="false" tabindex="-1">Calendario</button>
-    <button role="tab" id="tab-incendios" aria-controls="p-incendios" aria-selected="false" tabindex="-1">Incendios</button>
-    <button role="tab" id="tab-metodo" aria-controls="p-metodo" aria-selected="false" tabindex="-1">Datos y método</button>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-resumen" aria-controls="p-resumen" aria-selected="true">Summary</button>
+    <button role="tab" id="tab-calendario" aria-controls="p-calendario" aria-selected="false" tabindex="-1">Calendar</button>
+    <button role="tab" id="tab-incendios" aria-controls="p-incendios" aria-selected="false" tabindex="-1">Fires</button>
+    <button role="tab" id="tab-metodo" aria-controls="p-metodo" aria-selected="false" tabindex="-1">Data and method</button>
   </nav>
 
   <section role="tabpanel" id="p-resumen" aria-labelledby="tab-resumen" class="panel">
     <div class="figures" id="kpis"></div>
     <div class="split">
       <article class="block">
-        <h2>¿En qué meses se quema más?</h2>
-        <p class="how">La línea ámbar es este año. La línea clara es un año normal y la banda, lo que pasa en 8 de cada 10 años.</p>
-        <svg id="clim" class="chart" role="img" aria-label="Ciclo anual de focos de calor"></svg>
+        <h2>Which months burn the most?</h2>
+        <p class="how">The amber line is this year. The light line is a normal year and the band shows what happens in 8 out of 10 years.</p>
+        <svg id="clim" class="chart" role="img" aria-label="Yearly cycle of heat spots"></svg>
       </article>
       <article class="block">
-        <h2>¿Cómo va cada país este año?</h2>
-        <p class="how">Focos de calor hasta hoy frente a un año normal en las mismas fechas. Pulsa un país para verlo.</p>
+        <h2>How is each country doing this year?</h2>
+        <p class="how">Heat spots so far compared with a normal year over the same dates. Click a country to see it.</p>
         <div id="countryTable" class="table-wrap"></div>
       </article>
     </div>
@@ -114,80 +114,80 @@
   <section role="tabpanel" id="p-calendario" aria-labelledby="tab-calendario" class="panel" hidden>
     <article class="block">
       <div class="block-head">
-        <h2 id="calTitle">¿Cuántos focos hubo cada mes?</h2>
-        <fieldset class="seg small" aria-label="Qué mostrar en el calendario">
-          <label><input type="radio" name="mode" value="count" checked><span>Cantidad</span></label>
-          <label><input type="radio" name="mode" value="anom"><span>Frente a lo habitual</span></label>
-          <label><input type="radio" name="mode" value="raw"><span>Sin corregir</span></label>
+        <h2 id="calTitle">How many hotspots were there each month?</h2>
+        <fieldset class="seg small" aria-label="What to show in the calendar">
+          <label><input type="radio" name="mode" value="count" checked><span>Count</span></label>
+          <label><input type="radio" name="mode" value="anom"><span>Versus usual</span></label>
+          <label><input type="radio" name="mode" value="raw"><span>Uncorrected</span></label>
         </fieldset>
       </div>
       <p class="how" id="calHow"></p>
-      <div id="cal" role="img" aria-label="Calendario de focos por mes y año"></div>
+      <div id="cal" role="img" aria-label="Calendar of hotspots by month and year"></div>
       <div class="cal-foot">
         <div id="calLegend" class="legend inline"></div>
-        <label class="check"><input type="checkbox" id="nums" checked> Mostrar números</label>
+        <label class="check"><input type="checkbox" id="nums" checked> Show numbers</label>
       </div>
     </article>
     <article class="block">
       <div class="block-head">
-        <h2>Cada día desde 2001</h2>
-        <button id="stripesPng" type="button" class="quiet">Descargar imagen</button>
+        <h2>Every day since 2001</h2>
+        <button id="stripesPng" type="button" class="quiet">Download image</button>
       </div>
-      <p class="how">Una fila por año y una columna por día. Lo brillante son los días con más fuego.</p>
-      <canvas id="stripes" role="img" aria-label="Franjas de actividad diaria por año"></canvas>
+      <p class="how">One row per year and one column per day. Bright means days with more fire.</p>
+      <canvas id="stripes" role="img" aria-label="Daily activity stripes by year"></canvas>
       <p class="note" id="stripesNote"></p>
     </article>
     <article class="block downloads">
-      <h2>Descargar</h2>
+      <h2>Download</h2>
       <div class="dl">
-        <button id="dlCal" type="button">Tabla del calendario (CSV)</button>
-        <button id="dlPoints" type="button">Focos de los últimos meses (CSV)</button>
-        <button id="dlCountries" type="button">Tabla de países (CSV)</button>
-        <button id="dlSvg" type="button">Imagen del calendario (SVG)</button>
+        <button id="dlCal" type="button">Calendar table (CSV)</button>
+        <button id="dlPoints" type="button">Hotspots of recent months (CSV)</button>
+        <button id="dlCountries" type="button">Country table (CSV)</button>
+        <button id="dlSvg" type="button">Calendar image (SVG)</button>
       </div>
-      <p class="note">Los focos individuales están disponibles para los últimos 24 meses. Para años anteriores, descárgalos de NASA FIRMS.</p>
+      <p class="note">Individual hotspots are available for the last 24 months. For earlier years, download them from NASA FIRMS.</p>
     </article>
   </section>
 
   <section role="tabpanel" id="p-incendios" aria-labelledby="tab-incendios" class="panel" hidden>
     <article class="block">
-      <h2>¿Cómo de grande es un incendio comparado con los anteriores?</h2>
-      <p class="how">Juntamos los focos de calor que están a menos de 2 km y 2 días unos de otros: cada grupo es un incendio. Pulsa uno para verlo avanzar en el mapa.</p>
+      <h2>How big is a fire compared with earlier ones?</h2>
+      <p class="how">We group heat spots that are less than 2 km and 2 days apart: each group is a fire. Click one to watch it spread on the map.</p>
       <div id="events"></div>
-      <h3>Todos los incendios de la zona desde 2000</h3>
-      <p class="how">Cada punto es un incendio; cuanto más a la derecha, más grande. En ámbar los 10 mayores; con anillo, el más reciente.</p>
-      <svg id="evStrip" class="strip" role="img" aria-label="Tamaño de todos los incendios"></svg>
+      <h3>All fires in the area since 2000</h3>
+      <p class="how">Each dot is a fire; the further right, the bigger. The 10 largest are in amber; the most recent has a ring.</p>
+      <svg id="evStrip" class="strip" role="img" aria-label="Size of all fires"></svg>
     </article>
   </section>
 
   <section role="tabpanel" id="p-metodo" aria-labelledby="tab-metodo" class="panel" hidden>
     <article class="block prose">
-      <h2>De dónde salen los datos</h2>
-      <p>Los satélites de la NASA miden desde el espacio el calor de los fuegos activos: cada detección es un <b>foco de calor</b>. Hay dos generaciones:</p>
+      <h2>Where the data comes from</h2>
+      <p>NASA satellites measure the heat of active fires from space: each detection is a <b>heat spot</b> (hotspot). There are two generations:</p>
       <ul>
-        <li><b>MODIS</b>, desde el año 2000, mira la Tierra en cuadrados de 1 km y no ve los fuegos pequeños.</li>
-        <li><b>VIIRS</b>, desde 2012, mira en cuadrados de 375 m y detecta entre 2 y 5 veces más focos.</li>
+        <li><b>MODIS</b>, since 2000, looks at the Earth in 1 km squares and misses small fires.</li>
+        <li><b>VIIRS</b>, since 2012, looks in 375 m squares and detects 2 to 5 times more hotspots.</li>
       </ul>
-      <p>Si se juntan sin más, parece que en 2012 el fuego se disparó en toda Europa, pero solo cambió el satélite. Por eso <b>corregimos</b> los años antiguos: en el periodo en que funcionan los dos medimos, país por país, cuántos focos ve VIIRS por cada uno de MODIS, y aplicamos esa proporción. Cada país tiene la suya porque sus fuegos son distintos: grandes incendios forestales en el sur, muchas quemas agrícolas pequeñas en el este.</p>
-      <p class="note">Detalle técnico: un factor MODIS→VIIRS por país calibrado en <span id="ovl"></span> (intervalos del 90 % por bootstrap de años; los países con pocos datos usan el factor europeo). NOAA-20 y NOAA-21 se calibran contra S-NPP. Cada mes se cuenta con un solo satélite, nunca sumando. Se descartan las detecciones de baja confianza y <span id="nstatic"></span> fuentes fijas de calor (industria, antorchas, plantas solares).</p>
+      <p>If they are simply put together, it looks like fire shot up across Europe in 2012, but only the satellite changed. That is why we <b>correct</b> the older years: during the period when both work, we measure, country by country, how many hotspots VIIRS sees for each one from MODIS, and apply that ratio. Each country has its own because its fires are different: large forest fires in the south, many small agricultural fires in the east.</p>
+      <p class="note">Technical detail: one MODIS→VIIRS factor per country calibrated in <span id="ovl"></span> (90% intervals by bootstrap over years; countries with little data use the European factor). NOAA-20 and NOAA-21 are calibrated against S-NPP. Each month is counted with a single satellite, never summed. Low-confidence detections and <span id="nstatic"></span> fixed heat sources (industry, flares, solar plants) are discarded.</p>
     </article>
     <div class="split">
       <article class="block">
-        <h2>Corregir evita un salto falso en 2012</h2>
-        <svg id="annual" class="chart" role="img" aria-label="Total anual corregido y sin corregir"></svg>
+        <h2>Correcting avoids a false jump in 2012</h2>
+        <svg id="annual" class="chart" role="img" aria-label="Annual total, corrected and uncorrected"></svg>
       </article>
       <article class="block">
-        <h2>¿Funciona la corrección?</h2>
+        <h2>Does the correction work?</h2>
         <div id="validation"></div>
       </article>
     </div>
     <article class="block" id="reportedCard" hidden>
       <div class="block-head">
-        <h2>Focos de calor frente a área quemada</h2>
-        <label class="inline-ctl">Comparar con <select id="repMetric"></select></label>
+        <h2>Heat spots versus burned area</h2>
+        <label class="inline-ctl">Compare with <select id="repMetric"></select></label>
       </div>
-      <p class="how">Las dos líneas están en escala relativa (100 = un año medio). Si suben y bajan a la vez, los focos de calor reflejan bien lo que se quema.</p>
-      <svg id="reported" class="chart" role="img" aria-label="Comparación con el área quemada"></svg>
+      <p class="how">Both lines are on a relative scale (100 = an average year). If they rise and fall together, heat spots reflect well what burns.</p>
+      <svg id="reported" class="chart" role="img" aria-label="Comparison with burned area"></svg>
       <p class="note" id="reportedNote"></p>
     </article>
   </section>
@@ -195,39 +195,39 @@
 
 <div class="assistant">
   <div id="assistantPanel" class="assistant-panel" hidden>
-    <div class="assistant-head"><b>Pregunta lo que quieras saber</b><button id="assistantClose" class="quiet" type="button" aria-label="Cerrar">Cerrar</button></div>
-    <button id="mic" class="mic" type="button">Pulsa y habla</button>
-    <form id="askForm" class="ask-row"><label class="sr" for="ask">Pregunta</label><input id="ask" type="text" placeholder="o escríbela aquí"><button type="submit">Preguntar</button></form>
+    <div class="assistant-head"><b>Ask whatever you want to know</b><button id="assistantClose" class="quiet" type="button" aria-label="Close">Close</button></div>
+    <button id="mic" class="mic" type="button">Press and speak</button>
+    <form id="askForm" class="ask-row"><label class="sr" for="ask">Question</label><input id="ask" type="text" placeholder="or type it here"><button type="submit">Ask</button></form>
     <div id="answer" class="answer" aria-live="polite" hidden></div>
-    <p class="note">Por ejemplo: «¿cómo va Grecia este año?», «¿cuándo se quema en Ucrania?», «el mayor incendio de Portugal», «¿qué países van peor?», «enséñame el salto de 2012».</p>
+    <p class="note">For example: “how is Greece doing this year?”, “when does it burn in Ukraine?”, “the biggest fire in Portugal”, “which countries are doing worst?”, “show me the 2012 jump”.</p>
   </div>
-  <button id="assistantBtn" class="fab" type="button" aria-expanded="false" aria-controls="assistantPanel" aria-label="Pregúntale">
+  <button id="assistantBtn" class="fab" type="button" aria-expanded="false" aria-controls="assistantPanel" aria-label="Ask it">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12h-2Z" fill="currentColor"/></svg>
-    <span class="fab-txt">Pregúntale</span>
+    <span class="fab-txt">Ask it</span>
   </button>
 </div>
 
 <dialog id="help" aria-labelledby="helpTitle">
-  <h2 id="helpTitle">Cómo se usa</h2>
+  <h2 id="helpTitle">How to use</h2>
   <ol>
-    <li><b>Elige una zona</b> arriba: toda Europa, un país, o dibuja la tuya. También puedes pulsar un país en el mapa.</li>
-    <li><b>Lee la frase del mapa</b>: dice si este año se está quemando más o menos de lo habitual.</li>
-    <li><b>Explora</b>: el <i>Calendario</i> enseña cuándo se quema, <i>Incendios</i> compara un fuego con los anteriores y el mapa, dónde.</li>
-    <li><b>O pregunta</b> con el botón de abajo a la derecha.</li>
+    <li><b>Choose an area</b> at the top: all of Europe, one country, or draw your own. You can also click a country on the map.</li>
+    <li><b>Read the map sentence</b>: it says whether this year is burning more or less than usual.</li>
+    <li><b>Explore</b>: the <i>Calendar</i> shows when it burns, <i>Fires</i> compares a fire with earlier ones and the map shows where.</li>
+    <li><b>Or ask</b> with the button at the bottom right.</li>
   </ol>
-  <h3>Palabras que verás</h3>
+  <h3>Words you will see</h3>
   <dl>
-    <dt>Foco de calor</dt><dd>Un punto donde un satélite vio el calor de un fuego activo. Un incendio grande produce muchos.</dd>
-    <dt>Lo habitual</dt><dd>Lo que pasa en un año normal (la mediana de los años anteriores) en esas mismas fechas.</dd>
-    <dt>Corregido</dt><dd>Los satélites antiguos ven menos fuegos que los nuevos; corregimos los antiguos para poder comparar todos los años.</dd>
+    <dt>Heat spot (hotspot)</dt><dd>A point where a satellite saw the heat of an active fire. A large fire produces many.</dd>
+    <dt>Usual</dt><dd>What happens in a normal year (the median of previous years) over those same dates.</dd>
+    <dt>Corrected</dt><dd>Older satellites see fewer fires than newer ones; we correct the older ones so all years can be compared.</dd>
   </dl>
-  <form method="dialog"><button class="primary" type="submit">Empezar</button></form>
+  <form method="dialog"><button class="primary" type="submit">Get started</button></form>
 </dialog>
 
 <div id="tip" class="tip" role="tooltip" hidden></div>
 <footer>
-  <p>Focos de calor: NASA FIRMS (MODIS y VIIRS). Fotos: NASA GIBS. Área quemada: GWIS / Copernicus vía Our World in Data. Mapa base: © Esri y © OpenStreetMap (o CARTO si se configura su clave).</p>
-  <p>NASA Space Apps Challenge 2026, reto «Harmonization of MODIS and VIIRS Hot Spots» propuesto por CONAE.</p>
+  <p>Heat spots: NASA FIRMS (MODIS and VIIRS). Photos: NASA GIBS. Burned area: GWIS / Copernicus via Our World in Data. Base map: © Esri and © OpenStreetMap (or CARTO if its key is configured).</p>
+  <p>NASA Space Apps Challenge 2026, challenge "Harmonization of MODIS and VIIRS Hot Spots" proposed by CONAE.</p>
 </footer>
 
 <script src="vendor/leaflet.js"></script>
