@@ -1,0 +1,76 @@
+METODO Y DATOS
+
+1. OBJETIVO
+Obtener una serie unica y comparable de focos de calor en Europa (2000-hoy) a partir de
+dos familias de sensores con distinta resolucion: MODIS (1 km) y VIIRS (375 m).
+
+2. ZONA
+40 paises: UE-27, Reino Unido, Noruega, Suiza, Islandia, Albania, Bosnia, Kosovo,
+Macedonia del Norte, Montenegro, Serbia, Ucrania, Moldavia y Bielorrusia.
+Rusia queda fuera. Aland se une a Finlandia. Lista en pipeline/config.py.
+Caja geografica: lon -32 a 45, lat 27 a 72.
+
+3. FUENTES
+- NASA FIRMS (focos MODIS Terra/Aqua, VIIRS S-NPP/NOAA-20/NOAA-21).
+    * Anos completos: zips anuales por pais (firms.modaps.eosdis.nasa.gov/country/).
+    * Ano en curso: API de area (NRT) en teselas; necesita clave FIRMS_MAP_KEY.
+- NASA GIBS: imagen de satelite para ver los incendios.
+- GWIS / Copernicus via Our World in Data: area quemada anual por pais.
+- Natural Earth (50m): fronteras.
+Cobertura (web/data/meta.json): Terra desde 2000-11, Aqua 2002-07, S-NPP 2012-01,
+NOAA-20 2018-04, NOAA-21 2026-01. Ultimo dato: 2026-11-14.
+
+4. PROCESO (carpeta pipeline/)
+00_countries.py       Poligonos de paises (Natural Earth) -> data/europa_paises.geojson.
+01_download_firms.py  Zips anuales y datos recientes por API.
+02_clean.py           Esquema comun, descarta baja confianza, asigna pais a cada foco,
+                      detecta y elimina fuentes fijas de calor.
+03_harmonize.py       Factores MODIS->VIIRS por pais y validacion.
+04_aggregate.py       JSON para la web (series, rejilla, incendios, focos recientes).
+05_reported.py        Area quemada de GWIS (-> web/data/reportado.csv).
+
+5. LIMPIEZA
+- MODIS: se descartan detecciones con confianza < 30.
+- VIIRS: solo confianza nominal o alta.
+- Fuentes fijas de calor: celdas de ~1 km (0,01 grados) con VIIRS en 25 dias o mas
+  repartidos en 8 meses o mas del ano (industria, antorchas, plantas solares).
+  Las quemas agricolas se repiten pero en pocos meses, y se conservan.
+
+6. ARMONIZACION
+Unidad comun: "focos equivalentes VIIRS S-NPP".
+- r[pais] = S-NPP / (Terra+Aqua) en el solape 2012-2020, con intervalo del 90 % por
+  bootstrap de anos (500 remuestreos). Factor europeo de respaldo si el pais tiene
+  menos de 400 detecciones MODIS en el solape.
+- a = (Terra+Aqua)/Terra: cubre los meses anteriores a Aqua (2000-11 a 2002-06).
+- k20 = S-NPP/NOAA-20 y k21 = S-NPP/NOAA-21: calibran los satelites nuevos.
+- Cada mes se cuenta con UN sensor (S-NPP > NOAA-20 > NOAA-21 > Terra+Aqua > Terra);
+  nunca se suman sensores.
+Valores europeos obtenidos (factores.json): r = 3,22 (IC 3,14-3,31); a = 2,11;
+k20 = 0,964; k21 = 1,011.
+
+7. VALIDACION
+Se esconde cada ano del solape (2012-2020), se estima VIIRS desde MODIS y se compara con
+lo observado, por pais y para Europa, con tres opciones: sin corregir, factor europeo y
+factor por pais. Error medio anual en Europa: ~3,4 % corregido frente a ~69 % usando
+solo MODIS sin corregir. Detalle en web/data/validacion.json.
+
+8. INCENDIOS
+Focos a <= 2 km y <= 2 dias se unen en un incendio. Se guardan los de >= 15 focos
+(corregidos). Se guardan todos los focos de los 200 mayores de Europa y de los 10
+mayores por pais (maximo 3000 por incendio, muestra aleatoria).
+
+9. DATOS QUE CARGA LA WEB (web/data/)
+La web no carga millones de puntos: series por pais (series.json, diario.json),
+rejilla de ~50 km (rejilla.json), incendios (incendios.json, incendios_focos.json),
+focos individuales de los ultimos 24 meses (focos/AAAA-MM.json), factores y validacion,
+fuentes fijas (fuentes_fijas.geojson) y area quemada (reportado.csv). Total ~20 MB.
+
+10. LIMITACIONES
+- Zonas dibujadas: celdas de ~50 km, aproximadas.
+- Un mes sin focos puede ser por nubes.
+- Area quemada GWIS: otra medicion satelital, no estadistica oficial. Se pueden anadir
+  tablas oficiales (EFFIS) en data/raw/reportado_extra.csv con columnas
+  iso,year,incendios,hectareas_oficiales.
+- Los factores son promedios por pais en 2012-2020.
+- Los datos de prueba (tests/make_synthetic.py) son inventados; la web avisa con un
+  banner si meta.json tiene "sinteticos": true (ahora es false).
