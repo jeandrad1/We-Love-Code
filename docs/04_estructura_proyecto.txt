@@ -1,0 +1,22 @@
+ESTRUCTURA DEL PROYECTO
+
+README.md                     Descripcion general e instrucciones (en la raiz).
+resumen-uso-claude.md         Uso de IA (ya redactado).
+requirements.txt              Dependencias de Python.
+.github/workflows/static.yml  Publicacion de web/ en GitHub Pages (push a v2).
+data/europa_paises.geojson    Poligonos de paises. (data/raw, clean y agg: ignorados por git)
+pipeline/                     Proceso de datos:
+  config.py                   Paises, umbrales, fuentes y parametros.
+  00_countries.py ... 05_reported.py   Pasos (ver 02_metodo_y_datos.txt).
+tests/make_synthetic.py       Generador de datos sinteticos de prueba.
+web/                          Web estatica:
+  index.html, style.css       Estructura y estilos (tema oscuro "noche orbital").
+  app.js                      Nucleo: carga de datos, calendario, graficos.
+  map.js                      Mapa (Leaflet, Esri, capa GIBS).
+  extras.js                   Paises, incendios, franjas diarias.
+  ui.js                       Portada, pestanas, asistente por voz.
+  vendor/                     Leaflet y Leaflet.Draw locales.
+  data/                       JSON/CSV generados por el pipeline (~20 MB).
+docs/                         Esta documentacion.
+
+RAMAS GIT: main, deploy-web-pages, fix-pages-artifact-deployment, v2, v3 (la mas reciente).

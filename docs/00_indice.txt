@@ -1,0 +1,11 @@
+DOCUMENTACION - FUEGO EN EUROPA
+NASA Space Apps Challenge 2026 - Reto "Harmonization of MODIS and VIIRS Hot Spots" (CONAE)
+
+Archivos de esta carpeta:
+  01_formulario.txt           Textos para rellenar el formulario de entrega (copiar y pegar).
+  02_metodo_y_datos.txt       Metodo, fuentes de datos, resultados y limitaciones.
+  03_guia_instalacion.txt     Como instalar, procesar los datos y ejecutar la web.
+  04_estructura_proyecto.txt  Que hay en cada carpeta y archivo.
+
+Nota: el apartado "uso de IA" no esta aqui; ya existe en resumen-uso-claude.md.
+Nota: 01_formulario.txt sigue los campos del formulario real de Space Apps (textos en ingles).

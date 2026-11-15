@@ -1,0 +1,76 @@
+FORMULARIO DE ENTREGA (NASA Space Apps) - TEXTOS LISTOS PARA COPIAR
+
+---
+PROJECT SUMMARY
+---
+
+--- Project Name ("Project We Love Code"; "We Love Code")
+Fuego en Europa
+
+--- Summary * (50-200 palabras, max. 1500 caracteres)
+Fuego en Europa is a web app that merges NASA's MODIS and VIIRS fire detections into one comparable record of heat spots for 40 European countries, from 2000 to today. MODIS (1 km) and VIIRS (375 m) see fires at different resolutions, so their counts cannot be compared directly, and the historical series shows a false jump when VIIRS starts in 2012. We downloaded NASA FIRMS data, removed fixed heat sources (industry, flares, solar plants) and converted everything to a common unit, "VIIRS S-NPP equivalent hotspots", using a MODIS-to-VIIRS factor calibrated for each country over the 2012-2020 overlap, with 90% bootstrap intervals. Hiding one year at a time, the correction predicts yearly European VIIRS counts with about 3.4% mean error, versus about 69% for uncorrected MODIS. The site offers a night-time map, a monthly calendar, comparison with usual levels, individually detected fires with NASA GIBS imagery, downloads and a voice assistant. It matters because researchers, agencies and citizens can read 25 years of fire trends without sensor artifacts.
+
+---
+PROJECT LINKS
+---
+
+--- Project Demonstration * (7 diapositivas como maximo O video de 30 s como maximo,
+    en enlace publico, sin contrasena ni registro)
+[URL DE LA DEMO]
+
+--- Project * (enlace publico al proyecto)
+Web: [https://jeandrad1.github.io/NasaSpaceAppChallenge2026/ - comprobar que abre sin login]
+Codigo: https://github.com/jeandrad1/NasaSpaceAppChallenge2026
+
+---
+PROJECT INFORMATION
+---
+
+--- Project Details *
+WHAT IT DOES
+Fuego en Europa harmonizes the two main families of NASA active-fire detections: MODIS (Terra and Aqua, 1 km) and VIIRS (Suomi NPP, NOAA-20 and NOAA-21, 375 m). Because they detect fires at different sensitivity, a raw time series shows a false jump when VIIRS appears (2012) and when new satellites join. Our pipeline builds a single, continuous series for 40 European countries (EU-27, UK, Norway, Switzerland, Iceland, the Balkans, Ukraine, Moldova and Belarus; Russia excluded) from 2000 to the present.
+
+HOW IT WORKS
+1. Download: yearly per-country summaries and the near-real-time API from NASA FIRMS.
+2. Cleaning: low-confidence detections are dropped, each hotspot is assigned to a country, and fixed heat sources (industry, flares, solar plants) are removed: ~1 km cells with VIIRS detections on 25+ days spread over 8+ months of the year. Seasonal agricultural burning is kept.
+3. Harmonization: the common unit is "VIIRS S-NPP equivalent hotspots". Each country gets its own MODIS-to-VIIRS factor, calibrated in the 2012-2020 overlap with 90% bootstrap intervals over years. A per-country factor is needed because fire type changes a lot: large Mediterranean wildfires are well seen by MODIS, while many small agricultural fires in the east are missed. Countries with fewer than 400 MODIS detections in the overlap use the European factor. NOAA-20 and NOAA-21 are calibrated against S-NPP, and a factor covers the months before Aqua. Each month is counted with a single satellite, never summed, to avoid double counting.
+4. Validation: we hide one year of the overlap, estimate VIIRS from MODIS and compare with what VIIRS really saw, per country and for Europe, comparing no correction, a European factor and a per-country factor. For Europe the mean yearly error is about 3.4% with correction versus about 69% with raw MODIS.
+5. Fires: hotspots within 2 km and 2 days are merged into fires (15+ corrected hotspots), so each fire can be compared with earlier ones and replayed on the map over NASA GIBS true-colour imagery.
+6. Context: hotspots are compared with annual burned area from GWIS/Copernicus, an independent measurement.
+
+BENEFITS AND INTENDED IMPACT
+Researchers, civil protection agencies, journalists and citizens can compare any year with any other, from 2000 to today, without being misled by changes of sensor. The site shows which countries are worse than usual this year, lets users draw a zone on the map, and offers CSV/SVG/PNG downloads. The web is static (no server), loads fast (the browser never loads millions of points: country series, a ~50 km grid, detected fires and individual hotspots only for the last 24 months), and works on mobile.
+
+CREATIVITY
+Plain-language explanations, a night-time "orbital" visual theme, daily fire "stripes" image, accessible colours that do not rely on colour alone, a voice assistant ("which countries are worse this year?", "the biggest fire in Portugal"), and an explicit "uncorrected" view that makes the false 2012 jump visible.
+
+TOOLS
+Python (pandas, numpy, pyarrow, shapely, scipy, requests) for the pipeline; JavaScript, HTML and CSS with Leaflet and Leaflet.Draw for the web; Web Speech API for voice; GitHub and GitHub Pages (GitHub Actions) for hosting. Processing about 8 million hotspots takes about 3 minutes on a personal computer.
+
+FACTORS WE CONSIDERED
+Different resolution and overpass times, orbit drift of Terra and Aqua after 2020 (so calibration uses 2012-2020), clouds (a month with no hotspots may be cloud cover), static heat sources, regional fire regimes, and honest limits: drawn zones use ~50 km cells, and GWIS burned area is a satellite estimate, not an official statistic.
+
+Code and documentation: https://github.com/jeandrad1/NasaSpaceAppChallenge2026 (folder docs/)
+
+--- Use of Super Intelligence (SI) *
+Ya lo tenemos documentado en resumen-uso-claude.md.
+
+--- NASA Data * (Link Text | Link Url)
+NASA FIRMS - Fire Information for Resource Management System (MODIS and VIIRS active fires) | https://firms.modaps.eosdis.nasa.gov/
+NASA FIRMS Country Summaries (yearly MODIS/VIIRS per country) | https://firms.modaps.eosdis.nasa.gov/country/
+NASA FIRMS Area API (near-real-time hotspots) | https://firms.modaps.eosdis.nasa.gov/api/area/
+NASA GIBS - Global Imagery Browse Services (VIIRS NOAA-20 true colour imagery) | https://gibs.earthdata.nasa.gov/
+NASA Worldview / EOSDIS (referencia del producto de imagen) | https://worldview.earthdata.nasa.gov/    [opcional]
+
+--- Space Agency Partner & Other Data (Link Text | Link Url)
+Global Wildfire Information System (GWIS / Copernicus, JRC) - annual burned area, via Our World in Data | https://ourworldindata.org/grapher/annual-area-burnt-by-wildfires-gwis
+Natural Earth - country boundaries (50m) | https://www.naturalearthdata.com/
+Natural Earth vector (GitHub, geojson used) | https://github.com/nvkelso/natural-earth-vector
+Esri World Dark Gray Canvas - base map | https://www.arcgis.com/home/item.html?id=1970c1995b8f44749f4b9b6e81b5ba45
+OpenStreetMap - base map data | https://www.openstreetmap.org/copyright
+Leaflet - mapping library (BSD-2) | https://leafletjs.com/
+Leaflet.draw - drawing tools (MIT) | https://github.com/Leaflet/Leaflet.draw
+Archivo typeface (Google Fonts, OFL) | https://fonts.google.com/specimen/Archivo
+Python libraries: pandas, numpy, pyarrow, shapely, scipy, requests | https://pypi.org/
+CONAE - challenge proponent (Harmonization of MODIS and VIIRS Hot Spots) | https://www.argentina.gob.ar/ciencia/conae
+(Revisar)

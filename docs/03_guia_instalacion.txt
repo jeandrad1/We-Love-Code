@@ -1,0 +1,44 @@
+GUIA DE INSTALACION Y EJECUCION
+
+REQUISITOS: Python 3.10+ y git. (requirements.txt: pandas, numpy, pyarrow, shapely, scipy, requests)
+
+1. INSTALAR
+   python -m venv .venv
+   .venv\Scripts\activate          (Windows)   |   source .venv/bin/activate  (Linux/Mac)
+   pip install -r requirements.txt
+
+2. VER LA WEB SIN PROCESAR NADA (los datos ya estan en web/data/)
+   cd web
+   python -m http.server 8000
+   Abrir http://localhost:8000
+   (No funciona abriendo index.html con doble clic: hace falta servidor.)
+
+3. REGENERAR LOS DATOS (opcional)
+   Clave FIRMS gratuita: https://firms.modaps.eosdis.nasa.gov/api/map_key/
+   PowerShell:  $env:FIRMS_MAP_KEY="tu_clave"       Bash: export FIRMS_MAP_KEY=tu_clave
+   cd pipeline
+   python 00_countries.py
+   python 01_download_firms.py                   (anos completos + ano en curso; archivos grandes)
+   python 01_download_firms.py --solo-reciente   (solo refrescar antes de la demo)
+   python 02_clean.py
+   python 03_harmonize.py
+   python 04_aggregate.py
+   python 05_reported.py
+   Si FIRMS cambia la ruta de los zips, descargarlos a mano de
+   https://firms.modaps.eosdis.nasa.gov/country/ y dejarlos en data/raw/country/.
+   Alternativa: "Archive Download" de FIRMS -> CSV en data/raw/archive/.
+
+4. DATOS DE PRUEBA (sin clave)
+   python tests/make_synthetic.py, luego los pasos 02-04 (04 con --sinteticos).
+
+5. PUBLICAR EN GITHUB PAGES
+   Settings -> Pages -> Source: GitHub Actions.
+   El flujo .github/workflows/static.yml sube la carpeta web/ y se lanza con push en
+   la rama v2 o a mano (workflow_dispatch). La rama mas reciente es v3: para publicarla
+   hay que anadir "v3" en "branches:" del flujo (o fusionar v3 en v2) y hacer push.
+
+6. SEGURIDAD - IMPORTANTE
+   El README.md tiene escrita una clave real de FIRMS (FIRMS_MAP_KEY=...). Esta en el
+   historial publico de git. Recomendado: regenerar la clave en FIRMS, poner un
+   marcador (tu_clave) en el README y no subir claves (.env ya esta en .gitignore).
+   Tampoco hay que poner claves de CARTO en web/map.js (vacia = usa Esri, sin clave).
