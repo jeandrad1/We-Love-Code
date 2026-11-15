@@ -1,0 +1,77 @@
+METHOD AND DATA
+
+1. GOAL
+Obtain a single, comparable series of heat spots in Europe (2000 to today) from two
+families of sensors with different resolution: MODIS (1 km) and VIIRS (375 m).
+
+2. AREA
+40 countries: EU-27, United Kingdom, Norway, Switzerland, Iceland, Albania, Bosnia,
+Kosovo, North Macedonia, Montenegro, Serbia, Ukraine, Moldova and Belarus.
+Russia is excluded. Aland is merged into Finland. List in pipeline/config.py.
+Bounding box: lon -32 to 45, lat 27 to 72.
+
+3. SOURCES
+- NASA FIRMS (MODIS Terra/Aqua and VIIRS S-NPP/NOAA-20/NOAA-21 hotspots).
+    * Full years: yearly per-country zips (firms.modaps.eosdis.nasa.gov/country/).
+    * Current year: area API (NRT) in tiles; needs the FIRMS_MAP_KEY key.
+- NASA GIBS: satellite imagery to view the fires.
+- GWIS / Copernicus via Our World in Data: annual burned area per country.
+- Natural Earth (50m): borders.
+Coverage (web/data/meta.json): Terra from 2000-11, Aqua 2002-07, S-NPP 2012-01,
+NOAA-20 2018-04, NOAA-21 2026-01. Last data: 2026-11-14.
+
+4. PIPELINE (folder pipeline/)
+00_countries.py       Country polygons (Natural Earth) -> data/europa_paises.geojson.
+01_download_firms.py  Yearly zips and recent data through the API.
+02_clean.py           Common schema, drops low confidence, assigns a country to each
+                      hotspot, detects and removes fixed heat sources.
+03_harmonize.py       Per-country MODIS->VIIRS factors and validation.
+04_aggregate.py       JSON for the web (series, grid, fires, recent hotspots).
+05_reported.py        GWIS burned area (-> web/data/reportado.csv).
+
+5. CLEANING
+- MODIS: detections with confidence < 30 are dropped.
+- VIIRS: only nominal or high confidence.
+- Fixed heat sources: ~1 km cells (0.01 degrees) with VIIRS detections on 25 or more
+  days spread over 8 or more months of the year (industry, flares, solar plants).
+  Agricultural burning repeats but in few months, and is kept.
+
+6. HARMONIZATION
+Common unit: "VIIRS S-NPP equivalent hotspots".
+- r[country] = S-NPP / (Terra+Aqua) in the 2012-2020 overlap, with a 90% interval by
+  bootstrap over years (500 resamples). European fallback factor if the country has
+  fewer than 400 MODIS detections in the overlap.
+- a = (Terra+Aqua)/Terra: covers the months before Aqua (2000-11 to 2002-06).
+- k20 = S-NPP/NOAA-20 and k21 = S-NPP/NOAA-21: calibrate the newer satellites.
+- Each month is counted with ONE sensor (S-NPP > NOAA-20 > NOAA-21 > Terra+Aqua > Terra);
+  sensors are never summed.
+European values obtained (factores.json): r = 3.22 (CI 3.14-3.31); a = 2.11;
+k20 = 0.964; k21 = 1.011.
+
+7. VALIDATION
+Each year of the overlap (2012-2020) is hidden, VIIRS is estimated from MODIS and
+compared with what was observed, per country and for Europe, with three options:
+uncorrected, European factor and per-country factor. Mean yearly error in Europe:
+~3.4% corrected versus ~69% using MODIS alone without correction. Details in
+web/data/validacion.json.
+
+8. FIRES
+Hotspots within <= 2 km and <= 2 days are merged into a fire. Fires with >= 15
+(corrected) hotspots are kept. All hotspots are stored for the 200 largest fires in
+Europe and the 10 largest per country (maximum 3000 per fire, random sample).
+
+9. DATA LOADED BY THE WEB (web/data/)
+The web does not load millions of points: per-country series (series.json, diario.json),
+~50 km grid (rejilla.json), fires (incendios.json, incendios_focos.json), individual
+hotspots for the last 24 months (focos/YYYY-MM.json), factors and validation, fixed
+sources (fuentes_fijas.geojson) and burned area (reportado.csv). Total ~20 MB.
+
+10. LIMITATIONS
+- Drawn zones: ~50 km cells, approximate.
+- A month with no hotspots may be due to clouds.
+- GWIS burned area: another satellite measurement, not an official statistic. Official
+  tables (EFFIS) can be added in data/raw/reportado_extra.csv with columns
+  iso,year,incendios,hectareas_oficiales.
+- The factors are per-country averages over 2012-2020.
+- Test data (tests/make_synthetic.py) is invented; the web shows a banner if meta.json
+  has "sinteticos": true (it is currently false).

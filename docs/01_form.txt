@@ -1,4 +1,4 @@
-FORMULARIO DE ENTREGA (NASA Space Apps) - TEXTOS LISTOS PARA COPIAR
+SUBMISSION FORM (NASA Space Apps) - TEXTS READY TO COPY
 
 ---
 PROJECT SUMMARY
@@ -7,20 +7,20 @@ PROJECT SUMMARY
 --- Project Name ("Project We Love Code"; "We Love Code")
 Fuego en Europa
 
---- Summary * (50-200 palabras, max. 1500 caracteres)
+--- Summary * (50-200 words, max. 1500 characters)
 Fuego en Europa is a web app that merges NASA's MODIS and VIIRS fire detections into one comparable record of heat spots for 40 European countries, from 2000 to today. MODIS (1 km) and VIIRS (375 m) see fires at different resolutions, so their counts cannot be compared directly, and the historical series shows a false jump when VIIRS starts in 2012. We downloaded NASA FIRMS data, removed fixed heat sources (industry, flares, solar plants) and converted everything to a common unit, "VIIRS S-NPP equivalent hotspots", using a MODIS-to-VIIRS factor calibrated for each country over the 2012-2020 overlap, with 90% bootstrap intervals. Hiding one year at a time, the correction predicts yearly European VIIRS counts with about 3.4% mean error, versus about 69% for uncorrected MODIS. The site offers a night-time map, a monthly calendar, comparison with usual levels, individually detected fires with NASA GIBS imagery, downloads and a voice assistant. It matters because researchers, agencies and citizens can read 25 years of fire trends without sensor artifacts.
 
 ---
 PROJECT LINKS
 ---
 
---- Project Demonstration * (7 diapositivas como maximo O video de 30 s como maximo,
-    en enlace publico, sin contrasena ni registro)
-[URL DE LA DEMO]
+--- Project Demonstration * (at most 7 slides OR a video of at most 30 s,
+    public link, no password or registration)
+[DEMO URL]
 
---- Project * (enlace publico al proyecto)
-Web: [https://jeandrad1.github.io/NasaSpaceAppChallenge2026/ - comprobar que abre sin login]
-Codigo: https://github.com/jeandrad1/NasaSpaceAppChallenge2026
+--- Project * (public link to the project)
+Website: [https://jeandrad1.github.io/NasaSpaceAppChallenge2026/ - check that it opens without login]
+Code: https://github.com/jeandrad1/NasaSpaceAppChallenge2026
 
 ---
 PROJECT INFORMATION
@@ -53,14 +53,14 @@ Different resolution and overpass times, orbit drift of Terra and Aqua after 202
 Code and documentation: https://github.com/jeandrad1/NasaSpaceAppChallenge2026 (folder docs/)
 
 --- Use of Super Intelligence (SI) *
-Ya lo tenemos documentado en resumen-uso-claude.md.
+Already documented in claude-usage-summary.md.
 
 --- NASA Data * (Link Text | Link Url)
 NASA FIRMS - Fire Information for Resource Management System (MODIS and VIIRS active fires) | https://firms.modaps.eosdis.nasa.gov/
 NASA FIRMS Country Summaries (yearly MODIS/VIIRS per country) | https://firms.modaps.eosdis.nasa.gov/country/
 NASA FIRMS Area API (near-real-time hotspots) | https://firms.modaps.eosdis.nasa.gov/api/area/
 NASA GIBS - Global Imagery Browse Services (VIIRS NOAA-20 true colour imagery) | https://gibs.earthdata.nasa.gov/
-NASA Worldview / EOSDIS (referencia del producto de imagen) | https://worldview.earthdata.nasa.gov/    [opcional]
+NASA Worldview / EOSDIS (reference for the imagery product) | https://worldview.earthdata.nasa.gov/    [optional]
 
 --- Space Agency Partner & Other Data (Link Text | Link Url)
 Global Wildfire Information System (GWIS / Copernicus, JRC) - annual burned area, via Our World in Data | https://ourworldindata.org/grapher/annual-area-burnt-by-wildfires-gwis
@@ -73,4 +73,4 @@ Leaflet.draw - drawing tools (MIT) | https://github.com/Leaflet/Leaflet.draw
 Archivo typeface (Google Fonts, OFL) | https://fonts.google.com/specimen/Archivo
 Python libraries: pandas, numpy, pyarrow, shapely, scipy, requests | https://pypi.org/
 CONAE - challenge proponent (Harmonization of MODIS and VIIRS Hot Spots) | https://www.argentina.gob.ar/ciencia/conae
-(Revisar)
+(To review)

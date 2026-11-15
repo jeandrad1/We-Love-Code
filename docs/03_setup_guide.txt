@@ -1,0 +1,44 @@
+INSTALLATION AND RUN GUIDE
+
+REQUIREMENTS: Python 3.10+ and git. (requirements.txt: pandas, numpy, pyarrow, shapely, scipy, requests)
+
+1. INSTALL
+   python -m venv .venv
+   .venv\Scripts\activate          (Windows)   |   source .venv/bin/activate  (Linux/Mac)
+   pip install -r requirements.txt
+
+2. VIEW THE WEBSITE WITHOUT PROCESSING ANYTHING (the data is already in web/data/)
+   cd web
+   python -m http.server 8000
+   Open http://localhost:8000
+   (It does not work by double-clicking index.html: a server is needed.)
+
+3. REGENERATE THE DATA (optional)
+   Free FIRMS key: https://firms.modaps.eosdis.nasa.gov/api/map_key/
+   PowerShell:  $env:FIRMS_MAP_KEY="your_key"       Bash: export FIRMS_MAP_KEY=your_key
+   cd pipeline
+   python 00_countries.py
+   python 01_download_firms.py                   (full years + current year; large files)
+   python 01_download_firms.py --solo-reciente   (only refresh the recent data, e.g. before the demo)
+   python 02_clean.py
+   python 03_harmonize.py
+   python 04_aggregate.py
+   python 05_reported.py
+   If FIRMS changes the zip path, download them by hand from
+   https://firms.modaps.eosdis.nasa.gov/country/ and put them in data/raw/country/.
+   Alternative: FIRMS "Archive Download" -> CSV in data/raw/archive/.
+
+4. TEST DATA (no key needed)
+   python tests/make_synthetic.py, then steps 02-04 (04 with --sinteticos).
+
+5. PUBLISH ON GITHUB PAGES
+   Settings -> Pages -> Source: GitHub Actions.
+   The workflow .github/workflows/static.yml uploads the web/ folder and runs on a push
+   to the v2 branch or manually (workflow_dispatch). The most recent branch is v3: to
+   publish it, add "v3" under "branches:" in the workflow (or merge v3 into v2) and push.
+
+6. SECURITY - IMPORTANT
+   README.md contains a real FIRMS key (FIRMS_MAP_KEY=...). It is in the public git
+   history. Recommended: regenerate the key at FIRMS, put a placeholder (your_key) in
+   the README and never commit keys (.env is already in .gitignore).
+   Also do not put CARTO keys in web/map.js (empty = uses Esri, no key needed).
